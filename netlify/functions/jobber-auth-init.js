@@ -40,7 +40,7 @@ exports.handler = async (event) => {
       };
     }
 
-    const store = getStore('gl-jobber-tokens');
+    const store = getStore({ name: 'gl-jobber-tokens', siteID: process.env.SITE_ID, token: process.env.TOKEN });
     await store.set('access_token',  data.access_token);
     await store.set('refresh_token', data.refresh_token);
     await store.set('expiry', String(Date.now() + (data.expires_in || 3600) * 1000));

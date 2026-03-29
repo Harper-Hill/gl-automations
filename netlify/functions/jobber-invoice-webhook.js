@@ -308,7 +308,7 @@ async function jobberPost(token, body) {
 // JOBBER OAUTH — tokens stored in Netlify Blobs
 // ================================================================
 async function getValidJobberToken() {
-  const store   = getStore('gl-jobber-tokens');
+  const store   = getStore({ name: 'gl-jobber-tokens', siteID: process.env.SITE_ID, token: process.env.TOKEN });
   const expiry  = parseInt(await store.get('expiry') || '0');
   const access  = await store.get('access_token');
 
