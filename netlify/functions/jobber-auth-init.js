@@ -30,7 +30,7 @@ exports.handler = async (event) => {
       redirect_uri:  redirectUri,
     });
 
-    const resp = await httpPost('api.getjobber.com', '/api/oauth/token', body.toString());
+    const resp = await httpPost('api.getjobber.com', '/api/oauth/token', body.toString(), { 'Content-Type': 'application/x-www-form-urlencoded' }, true);
     const data = JSON.parse(resp.body);
 
     if (!data.access_token) {
