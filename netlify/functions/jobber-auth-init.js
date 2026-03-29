@@ -195,12 +195,13 @@ function getRedirectUri(event) {
 
 async function httpPost(hostname, path, body, extraHeaders, rawBody) {
   const bodyStr = rawBody ? body : JSON.stringify(body);
+  const contentType = rawBody
+    ? (extraHeaders && extraHeaders['Content-Type'] ? extraHeaders['Content-Type'] : 'application/x-www-form-urlencoded')
+    : 'application/json';
   const headers = {
-    'Content-Type':   rawBody ? (extraHeaders && extraHeaders['Content-Type'] || 'application/x-www-form-urlencoded') : 'application/json',
+    'Content-Type':   contentType,
     'Content-Length': Buffer.byteLength(bodyStr),
-    ...extraHeaders,
   };
-  if (!rawBody) headers['Content-Type'] = 'application/json';
   return new Promise((resolve, reject) => {
     const req = https.request({ hostname, path, method: 'POST', headers }, (res) => {
       let data = '';
