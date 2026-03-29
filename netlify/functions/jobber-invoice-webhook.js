@@ -59,7 +59,7 @@ exports.handler = async (event) => {
   }
 
   // 1. Verify Jobber HMAC signature
-  const signature = event.headers['x-jobber-hmac-sha256'];
+  const signature = event.headers['x-jobber-hmac-sha256'] || event.headers['X-Jobber-Hmac-SHA256'];
   if (!verifySignature(event.body, signature)) {
     console.error('Invalid webhook signature');
     return { statusCode: 401, body: 'Unauthorized' };
@@ -73,8 +73,9 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const topic     = payload.topic || payload.webHookEvent;
-  const invoiceId = payload.data && (payload.data.invoiceId || payload.data.id);
+  const event     = payload.data && payload.data.webHookEvent;
+  const topic     = event && event.topic;
+  const invoiceId = event && event.itemId;
 
   console.log(`Received webhook: topic=${topic}, invoiceId=${invoiceId}`);
 
