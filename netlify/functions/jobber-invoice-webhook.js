@@ -296,6 +296,20 @@ async function jobberPost(token, body) {
     'Authorization':            `Bearer ${token}`,
     'X-JOBBER-GRAPHQL-VERSION': CFG.API_VERSION,
   });
+  // Auto-refresh on 401
+  if (resp.status === 401) {
+    console.log('Token expired — refreshing...');
+    const newToken = await refreshJobberToken();
+    const retry = await httpPost('api.getjobber.com', '/api/graphql', body, {
+      'Authorization':            `Bearer ${newToken}`,
+      'X-JOBBER-GRAPHQL-VERSION': CFG.API_VERSION,
+    });
+    if (!retry.ok) {
+      console.error('Jobber API error after refresh:', retry.status, retry.body.substring(0, 200));
+      return null;
+    }
+    return JSON.parse(retry.body);
+  }
   if (!resp.ok) {
     console.error('Jobber API error:', resp.status, resp.body.substring(0, 200));
     return null;
@@ -308,12 +322,9 @@ async function jobberPost(token, body) {
 // JOBBER OAUTH — tokens stored in Netlify Blobs
 // ================================================================
 async function getValidJobberToken() {
-  const expiry = parseInt(process.env.JOBBER_TOKEN_EXPIRY || '0');
   const access = process.env.JOBBER_ACCESS_TOKEN;
-
   if (!access) throw new Error('No Jobber token. Run jobber-auth-init first.');
-  if (Date.now() >= expiry - 300000) return refreshJobberToken();
-  return access;
+  return access; // Token validity checked by API response — see callJobberApiWithRefresh_
 }
 
 async function refreshJobberToken() {
