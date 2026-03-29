@@ -73,9 +73,9 @@ exports.handler = async (event) => {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const event     = payload.data && payload.data.webHookEvent;
-  const topic     = event && event.topic;
-  const invoiceId = event && event.itemId;
+  const webhookEvent = payload.data && payload.data.webHookEvent;
+  const topic        = webhookEvent && webhookEvent.topic;
+  const invoiceId    = webhookEvent && webhookEvent.itemId;
 
   console.log(`Received webhook: topic=${topic}, invoiceId=${invoiceId}`);
 
