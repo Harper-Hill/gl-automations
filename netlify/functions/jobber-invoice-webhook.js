@@ -8,7 +8,6 @@
 
 const crypto  = require('crypto');
 const https   = require('https');
-const { getStore } = require('@netlify/blobs');
 const XLSX    = require('xlsx');
 
 // ── CONFIG (from Netlify environment variables) ───────────────
@@ -308,17 +307,16 @@ async function jobberPost(token, body) {
 // JOBBER OAUTH — tokens stored in Netlify Blobs
 // ================================================================
 async function getValidJobberToken() {
-  const store   = getStore({ name: 'gl-jobber-tokens', siteID: process.env.SITE_ID, token: process.env.TOKEN });
-  const expiry  = parseInt(await store.get('expiry') || '0');
-  const access  = await store.get('access_token');
+  const expiry = parseInt(process.env.JOBBER_TOKEN_EXPIRY || '0');
+  const access = process.env.JOBBER_ACCESS_TOKEN;
 
   if (!access) throw new Error('No Jobber token. Run jobber-auth-init first.');
-  if (Date.now() >= expiry - 300000) return refreshJobberToken(store);
+  if (Date.now() >= expiry - 300000) return refreshJobberToken();
   return access;
 }
 
-async function refreshJobberToken(store) {
-  const refresh = await store.get('refresh_token');
+async function refreshJobberToken() {
+  const refresh = process.env.JOBBER_REFRESH_TOKEN;
   if (!refresh) throw new Error('No refresh token. Re-run jobber-auth-init.');
 
   const body = new URLSearchParams({
@@ -328,19 +326,46 @@ async function refreshJobberToken(store) {
     refresh_token: refresh,
   });
 
-  const resp = await httpPost('api.getjobber.com', '/api/oauth/token',
-    body.toString(), { 'Content-Type': 'application/x-www-form-urlencoded' },
-    true // raw body
-  );
+  const resp = await httpPost('api.getjobber.com', '/api/oauth/token', body.toString(), {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }, true);
 
   const data = JSON.parse(resp.body);
   if (!data.access_token) throw new Error('Token refresh failed: ' + resp.body);
 
-  await store.set('access_token',  data.access_token);
-  await store.set('expiry',        String(Date.now() + (data.expires_in || 3600) * 1000));
-  if (data.refresh_token) await store.set('refresh_token', data.refresh_token);
+  // Update env vars via Netlify API
+  await setNetlifyEnvVar('JOBBER_ACCESS_TOKEN',  data.access_token);
+  await setNetlifyEnvVar('JOBBER_TOKEN_EXPIRY',  String(Date.now() + (data.expires_in || 3600) * 1000));
+  if (data.refresh_token) await setNetlifyEnvVar('JOBBER_REFRESH_TOKEN', data.refresh_token);
 
   return data.access_token;
+}
+
+async function setNetlifyEnvVar(key, value) {
+  const siteId = process.env.NETLIFY_SITE_ID;
+  const token  = process.env.NETLIFY_ACCESS_TOKEN;
+  if (!siteId || !token) return; // skip if not configured
+  const body = JSON.stringify([{ value, context: 'all' }]);
+  return new Promise((resolve) => {
+    const opts = {
+      hostname: 'api.netlify.com',
+      path:     '/api/v1/sites/' + siteId + '/env/' + key,
+      method:   'PUT',
+      headers:  {
+        'Authorization': 'Bearer ' + token,
+        'Content-Type':  'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const req = https.request(opts, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve());
+    });
+    req.on('error', () => resolve()); // non-fatal
+    req.write(body);
+    req.end();
+  });
 }
 
 

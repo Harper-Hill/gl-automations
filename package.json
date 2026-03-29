@@ -1,9 +1,8 @@
 {
   "name": "gl-automations-webhook",
   "version": "1.0.0",
-  "description": "Jobber invoice webhook → GL_2026.xlsx",
+  "description": "Jobber invoice webhook \u2192 GL_2026.xlsx",
   "dependencies": {
-    "@netlify/blobs": "^8.1.0",
     "xlsx": "https://cdn.sheetjs.com/xlsx-0.20.3/xlsx-0.20.3.tgz"
   }
 }
