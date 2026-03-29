@@ -44,13 +44,16 @@ exports.handler = async (event) => {
     await setNetlifyEnvVar('JOBBER_REFRESH_TOKEN', data.refresh_token);
     await setNetlifyEnvVar('JOBBER_TOKEN_EXPIRY',  expiry);
 
+    // Trigger a redeploy so the webhook function picks up the fresh tokens
+    await triggerNetlifyDeploy();
+
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'text/html' },
       body: `
         <html><body style="font-family:sans-serif;padding:40px">
           <h2>✅ Jobber connected for GL Automations</h2>
-          <p>Tokens stored as Netlify environment variables.</p>
+          <p>Tokens stored and redeploy triggered — webhook will be live in ~20 seconds.</p>
           <p><strong>You can now delete the <code>jobber-auth-init</code> function.</strong></p>
         </body></html>
       `,
@@ -71,6 +74,33 @@ exports.handler = async (event) => {
     body: '',
   };
 };
+
+async function triggerNetlifyDeploy() {
+  const siteId = CFG.SITE_ID;
+  const token  = CFG.NETLIFY_TOKEN;
+  if (!siteId || !token) return;
+  return new Promise((resolve) => {
+    const body = '{}';
+    const opts = {
+      hostname: 'api.netlify.com',
+      path:     '/api/v1/sites/' + siteId + '/deploys',
+      method:   'POST',
+      headers:  {
+        'Authorization':  'Bearer ' + token,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    };
+    const req = https.request(opts, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve());
+    });
+    req.on('error', () => resolve());
+    req.write(body);
+    req.end();
+  });
+}
 
 async function setNetlifyEnvVar(key, value) {
   // Try PATCH (update) first, fall back to POST (create) if 404
