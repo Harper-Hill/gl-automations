@@ -357,6 +357,7 @@ async function readTokensFromDrive(driveToken) {
     }).on('error', reject);
   });
 
+  console.log('Drive search result:', JSON.stringify(searchResp).substring(0, 200));
   const files = searchResp.files || [];
   if (files.length === 0) return null;
 
