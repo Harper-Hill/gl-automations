@@ -73,15 +73,26 @@ exports.handler = async (event) => {
 };
 
 async function setNetlifyEnvVar(key, value) {
-  const body = JSON.stringify([{ value, context: 'all' }]);
-  return new Promise((resolve, reject) => {
+  // Try PATCH (update) first, fall back to POST (create) if 404
+  const patchBody = JSON.stringify([{ value, context: 'all' }]);
+  const postBody  = JSON.stringify([{ key, values: [{ value, context: 'all' }] }]);
+
+  const patch = await netlifyApiCall('PATCH', `/api/v1/sites/${CFG.SITE_ID}/env/${key}`, patchBody, CFG.NETLIFY_TOKEN);
+  if (patch.status === 404) {
+    // Var doesn't exist yet — create it
+    await netlifyApiCall('POST', `/api/v1/sites/${CFG.SITE_ID}/env`, postBody, CFG.NETLIFY_TOKEN);
+  }
+}
+
+function netlifyApiCall(method, path, body, token) {
+  return new Promise((resolve) => {
     const opts = {
       hostname: 'api.netlify.com',
-      path:     `/api/v1/sites/${CFG.SITE_ID}/env/${key}`,
-      method:   'PUT',
-      headers:  {
-        'Authorization': 'Bearer ' + CFG.NETLIFY_TOKEN,
-        'Content-Type':  'application/json',
+      path,
+      method,
+      headers: {
+        'Authorization':  'Bearer ' + token,
+        'Content-Type':   'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
     };
@@ -90,7 +101,7 @@ async function setNetlifyEnvVar(key, value) {
       res.on('data', c => d += c);
       res.on('end', () => resolve({ status: res.statusCode, body: d }));
     });
-    req.on('error', reject);
+    req.on('error', () => resolve({ status: 500, body: '' }));
     req.write(body);
     req.end();
   });

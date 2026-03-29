@@ -345,25 +345,31 @@ async function refreshJobberToken() {
 async function setNetlifyEnvVar(key, value) {
   const siteId = process.env.NETLIFY_SITE_ID;
   const token  = process.env.NETLIFY_ACCESS_TOKEN;
-  if (!siteId || !token) return; // skip if not configured
-  const body = JSON.stringify([{ value, context: 'all' }]);
+  if (!siteId || !token) return;
+  const patchBody = JSON.stringify([{ value, context: 'all' }]);
+  const postBody  = JSON.stringify([{ key, values: [{ value, context: 'all' }] }]);
+  const patch = await netlifyApiCall('PATCH', '/api/v1/sites/' + siteId + '/env/' + key, patchBody, token);
+  if (patch.status === 404) {
+    await netlifyApiCall('POST', '/api/v1/sites/' + siteId + '/env', postBody, token);
+  }
+}
+
+function netlifyApiCall(method, path, body, token) {
   return new Promise((resolve) => {
     const opts = {
-      hostname: 'api.netlify.com',
-      path:     '/api/v1/sites/' + siteId + '/env/' + key,
-      method:   'PUT',
-      headers:  {
-        'Authorization': 'Bearer ' + token,
-        'Content-Type':  'application/json',
+      hostname: 'api.netlify.com', path, method,
+      headers: {
+        'Authorization':  'Bearer ' + token,
+        'Content-Type':   'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
     };
     const req = https.request(opts, (res) => {
       let d = '';
       res.on('data', c => d += c);
-      res.on('end', () => resolve());
+      res.on('end', () => resolve({ status: res.statusCode, body: d }));
     });
-    req.on('error', () => resolve()); // non-fatal
+    req.on('error', () => resolve({ status: 500, body: '' }));
     req.write(body);
     req.end();
   });
