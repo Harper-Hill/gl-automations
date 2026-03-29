@@ -307,23 +307,15 @@ async function jobberPost(token, body) {
 // ================================================================
 // JOBBER OAUTH — tokens stored in Netlify Blobs
 // ================================================================
-// Tokens stored in Google Drive as tokens.json — avoids Netlify deploy snapshot issue
-const TOKENS_FILE_NAME = 'gl-automations-tokens.json';
-
 async function getValidJobberToken() {
-  const driveToken = await getGoogleAccessToken();
-  let tokens = await readTokensFromDrive(driveToken);
+  const refreshToken = process.env.JOBBER_REFRESH_TOKEN;
+  if (!refreshToken) throw new Error('No JOBBER_REFRESH_TOKEN env var. Run jobber-auth-init first.');
 
-  if (!tokens || !tokens.refresh_token) {
-    throw new Error('No tokens found in Drive. Run jobber-auth-init first.');
-  }
-
-  // Always refresh to get a fresh access token
   const body = new URLSearchParams({
     client_id:     CFG.JOBBER_CLIENT_ID,
     client_secret: CFG.JOBBER_CLIENT_SECRET,
     grant_type:    'refresh_token',
-    refresh_token: tokens.refresh_token,
+    refresh_token: refreshToken,
   });
 
   const resp = await httpPost('api.getjobber.com', '/api/oauth/token', body.toString(), {
@@ -332,13 +324,7 @@ async function getValidJobberToken() {
 
   const data = JSON.parse(resp.body);
   if (!data.access_token) throw new Error('Token refresh failed: ' + resp.body);
-
-  // Save updated tokens back to Drive
-  tokens.access_token  = data.access_token;
-  tokens.expires_at    = Date.now() + (data.expires_in || 3600) * 1000;
-  if (data.refresh_token) tokens.refresh_token = data.refresh_token;
-  await writeTokensToDrive(driveToken, tokens);
-
+  console.log('Token refreshed OK');
   return data.access_token;
 }
 
