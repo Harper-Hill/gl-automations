@@ -1,25 +1,25 @@
 // ================================================================
 // netlify/functions/jobber-auth-init.js
-// One-time OAuth setup — visit this URL in a browser to connect
-// Jobber. Tokens are stored as Netlify environment variables.
-// DELETE or restrict this function after first use.
+// One-time OAuth setup — visit this URL in a browser to connect Jobber
+// Tokens stored in Google Drive as gl-automations-tokens.json
 // ================================================================
 
 'use strict';
 
-const https = require('https');
+const https  = require('https');
+const crypto = require('crypto');
 
 const CFG = {
   CLIENT_ID:     process.env.JOBBER_GL_CLIENT_ID,
   CLIENT_SECRET: process.env.JOBBER_GL_CLIENT_SECRET,
-  NETLIFY_TOKEN: process.env.NETLIFY_ACCESS_TOKEN,
-  SITE_ID:       process.env.NETLIFY_SITE_ID,
+  REDIRECT_PATH: '/.netlify/functions/jobber-auth-init',
 };
+
+const TOKENS_FILE_NAME = 'gl-automations-tokens.json';
 
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
 
-  // Step 2 — exchange code for tokens and store as env vars
   if (params.code) {
     const redirectUri = getRedirectUri(event);
     const body = new URLSearchParams({
@@ -37,30 +37,28 @@ exports.handler = async (event) => {
       return { statusCode: 400, body: 'Token exchange failed: ' + resp.body };
     }
 
-    const expiry = String(Date.now() + (data.expires_in || 3600) * 1000);
-
-    // Store tokens as Netlify env vars
-    await setNetlifyEnvVar('JOBBER_ACCESS_TOKEN',  data.access_token);
-    await setNetlifyEnvVar('JOBBER_REFRESH_TOKEN', data.refresh_token);
-    await setNetlifyEnvVar('JOBBER_TOKEN_EXPIRY',  expiry);
-
-    // Trigger a redeploy so the webhook function picks up the fresh tokens
-    await triggerNetlifyDeploy();
+    // Store tokens in Google Drive
+    const driveToken = await getGoogleAccessToken();
+    const tokens = {
+      access_token:  data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at:    Date.now() + (data.expires_in || 3600) * 1000,
+    };
+    await writeTokensToDrive(driveToken, tokens);
 
     return {
       statusCode: 200,
       headers: { 'Content-Type': 'text/html' },
       body: `
         <html><body style="font-family:sans-serif;padding:40px">
-          <h2>✅ Jobber connected for GL Automations</h2>
-          <p>Tokens stored and redeploy triggered — webhook will be live in ~20 seconds.</p>
-          <p><strong>You can now delete the <code>jobber-auth-init</code> function.</strong></p>
+          <h2>&#x2705; Jobber connected for GL Automations</h2>
+          <p>Tokens stored in Google Drive as <code>${TOKENS_FILE_NAME}</code>.</p>
+          <p>No redeploy needed — the webhook function reads tokens from Drive on every invocation.</p>
         </body></html>
       `,
     };
   }
 
-  // Step 1 — redirect to Jobber OAuth
   const redirectUri = getRedirectUri(event);
   const authUrl =
     'https://api.getjobber.com/api/oauth/authorize' +
@@ -75,87 +73,142 @@ exports.handler = async (event) => {
   };
 };
 
-async function triggerNetlifyDeploy() {
-  const siteId = CFG.SITE_ID;
-  const token  = CFG.NETLIFY_TOKEN;
-  if (!siteId || !token) return;
-  return new Promise((resolve) => {
-    const body = '{}';
-    const opts = {
-      hostname: 'api.netlify.com',
-      path:     '/api/v1/sites/' + siteId + '/deploys',
-      method:   'POST',
-      headers:  {
-        'Authorization':  'Bearer ' + token,
-        'Content-Type':   'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-    const req = https.request(opts, (res) => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => resolve());
-    });
-    req.on('error', () => resolve());
-    req.write(body);
-    req.end();
+// ── GOOGLE DRIVE ──────────────────────────────────────────────
+async function getGoogleAccessToken() {
+  const sa = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const now = Math.floor(Date.now() / 1000);
+  const claim = {
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/drive',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  };
+  const jwt  = buildJWT(sa.private_key, claim);
+  const body = new URLSearchParams({
+    grant_type: 'urn:ietf:params:oauth:grant-type:jwt-bearer',
+    assertion:  jwt,
   });
+  const resp = await httpPost('oauth2.googleapis.com', '/token', body.toString(), {
+    'Content-Type': 'application/x-www-form-urlencoded',
+  }, true);
+  const data = JSON.parse(resp.body);
+  if (!data.access_token) throw new Error('Google auth failed: ' + resp.body);
+  return data.access_token;
 }
 
-async function setNetlifyEnvVar(key, value) {
-  // Try PATCH (update) first, fall back to POST (create) if 404
-  const patchBody = JSON.stringify([{ value, context: 'all' }]);
-  const postBody  = JSON.stringify([{ key, values: [{ value, context: 'all' }] }]);
+async function writeTokensToDrive(driveToken, tokens) {
+  const json = JSON.stringify(tokens, null, 2);
+  const buf  = Buffer.from(json, 'utf8');
 
-  const patch = await netlifyApiCall('PATCH', `/api/v1/sites/${CFG.SITE_ID}/env/${key}`, patchBody, CFG.NETLIFY_TOKEN);
-  if (patch.status === 404) {
-    // Var doesn't exist yet — create it
-    await netlifyApiCall('POST', `/api/v1/sites/${CFG.SITE_ID}/env`, postBody, CFG.NETLIFY_TOKEN);
+  const searchResp = await new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'www.googleapis.com',
+      path:     '/drive/v3/files?q=' + encodeURIComponent('name="' + TOKENS_FILE_NAME + '" and trashed=false') + '&fields=files(id)',
+      headers:  { Authorization: 'Bearer ' + driveToken },
+    };
+    https.get(opts, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(JSON.parse(d)));
+    }).on('error', reject);
+  });
+
+  const files = (searchResp.files || []);
+  if (files.length > 0) {
+    // Update existing
+    await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: 'www.googleapis.com',
+        path:     '/upload/drive/v3/files/' + files[0].id + '?uploadType=media',
+        method:   'PATCH',
+        headers:  {
+          Authorization:    'Bearer ' + driveToken,
+          'Content-Type':   'application/json',
+          'Content-Length': buf.length,
+        },
+      };
+      const req = https.request(opts, (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      });
+      req.on('error', reject);
+      req.write(buf);
+      req.end();
+    });
+  } else {
+    // Create new
+    const boundary = 'gl_tok_boundary';
+    const meta = JSON.stringify({ name: TOKENS_FILE_NAME, mimeType: 'application/json' });
+    const multipart = Buffer.concat([
+      Buffer.from('--' + boundary + '\r\nContent-Type: application/json\r\n\r\n'),
+      Buffer.from(meta),
+      Buffer.from('\r\n--' + boundary + '\r\nContent-Type: application/json\r\n\r\n'),
+      buf,
+      Buffer.from('\r\n--' + boundary + '--'),
+    ]);
+    await new Promise((resolve, reject) => {
+      const opts = {
+        hostname: 'www.googleapis.com',
+        path:     '/upload/drive/v3/files?uploadType=multipart',
+        method:   'POST',
+        headers:  {
+          Authorization:    'Bearer ' + driveToken,
+          'Content-Type':   'multipart/related; boundary=' + boundary,
+          'Content-Length': multipart.length,
+        },
+      };
+      const req = https.request(opts, (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      });
+      req.on('error', reject);
+      req.write(multipart);
+      req.end();
+    });
   }
 }
 
-function netlifyApiCall(method, path, body, token) {
-  return new Promise((resolve) => {
-    const opts = {
-      hostname: 'api.netlify.com',
-      path,
-      method,
-      headers: {
-        'Authorization':  'Bearer ' + token,
-        'Content-Type':   'application/json',
-        'Content-Length': Buffer.byteLength(body),
-      },
-    };
-    const req = https.request(opts, (res) => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => resolve({ status: res.statusCode, body: d }));
-    });
-    req.on('error', () => resolve({ status: 500, body: '' }));
-    req.write(body);
-    req.end();
-  });
+// ── JWT ───────────────────────────────────────────────────────
+function buildJWT(privateKey, claims) {
+  const header  = base64url(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
+  const payload = base64url(JSON.stringify(claims));
+  const signing = `${header}.${payload}`;
+  const sign    = crypto.createSign('RSA-SHA256');
+  sign.update(signing);
+  const sig = sign.sign(privateKey, 'base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+  return `${signing}.${sig}`;
+}
+function base64url(str) {
+  return Buffer.from(str).toString('base64')
+    .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
 function getRedirectUri(event) {
   const host  = event.headers['x-forwarded-host'] || event.headers.host;
   const proto = event.headers['x-forwarded-proto'] || 'https';
-  return `${proto}://${host}/.netlify/functions/jobber-auth-init`;
+  return `${proto}://${host}${CFG.REDIRECT_PATH}`;
 }
 
-async function httpPost(hostname, path, body) {
+async function httpPost(hostname, path, body, extraHeaders, rawBody) {
+  const bodyStr = rawBody ? body : JSON.stringify(body);
+  const headers = {
+    'Content-Type':   rawBody ? (extraHeaders && extraHeaders['Content-Type'] || 'application/x-www-form-urlencoded') : 'application/json',
+    'Content-Length': Buffer.byteLength(bodyStr),
+    ...extraHeaders,
+  };
+  if (!rawBody) headers['Content-Type'] = 'application/json';
   return new Promise((resolve, reject) => {
-    const headers = {
-      'Content-Type':   'application/x-www-form-urlencoded',
-      'Content-Length': Buffer.byteLength(body),
-    };
     const req = https.request({ hostname, path, method: 'POST', headers }, (res) => {
       let data = '';
       res.on('data', c => data += c);
-      res.on('end', () => resolve({ status: res.statusCode, body: data }));
+      res.on('end', () => resolve({ ok: res.statusCode < 400, status: res.statusCode, body: data }));
     });
     req.on('error', reject);
-    req.write(body);
+    req.write(bodyStr);
     req.end();
   });
 }

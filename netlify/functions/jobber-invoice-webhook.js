@@ -307,22 +307,23 @@ async function jobberPost(token, body) {
 // ================================================================
 // JOBBER OAUTH — tokens stored in Netlify Blobs
 // ================================================================
+// Tokens stored in Google Drive as tokens.json — avoids Netlify deploy snapshot issue
+const TOKENS_FILE_NAME = 'gl-automations-tokens.json';
+
 async function getValidJobberToken() {
-  // Always get a fresh access token via refresh — avoids stale token in deploy snapshot
-  const refresh = process.env.JOBBER_REFRESH_TOKEN;
-  if (!refresh) throw new Error('No refresh token. Run jobber-auth-init first.');
-  return refreshJobberToken();
-}
+  const driveToken = await getGoogleAccessToken();
+  let tokens = await readTokensFromDrive(driveToken);
 
-async function refreshJobberToken() {
-  const refresh = process.env.JOBBER_REFRESH_TOKEN;
-  if (!refresh) throw new Error('No refresh token. Re-run jobber-auth-init.');
+  if (!tokens || !tokens.refresh_token) {
+    throw new Error('No tokens found in Drive. Run jobber-auth-init first.');
+  }
 
+  // Always refresh to get a fresh access token
   const body = new URLSearchParams({
     client_id:     CFG.JOBBER_CLIENT_ID,
     client_secret: CFG.JOBBER_CLIENT_SECRET,
     grant_type:    'refresh_token',
-    refresh_token: refresh,
+    refresh_token: tokens.refresh_token,
   });
 
   const resp = await httpPost('api.getjobber.com', '/api/oauth/token', body.toString(), {
@@ -332,12 +333,93 @@ async function refreshJobberToken() {
   const data = JSON.parse(resp.body);
   if (!data.access_token) throw new Error('Token refresh failed: ' + resp.body);
 
-  // Update env vars via Netlify API
-  await setNetlifyEnvVar('JOBBER_ACCESS_TOKEN',  data.access_token);
-  await setNetlifyEnvVar('JOBBER_TOKEN_EXPIRY',  String(Date.now() + (data.expires_in || 3600) * 1000));
-  if (data.refresh_token) await setNetlifyEnvVar('JOBBER_REFRESH_TOKEN', data.refresh_token);
+  // Save updated tokens back to Drive
+  tokens.access_token  = data.access_token;
+  tokens.expires_at    = Date.now() + (data.expires_in || 3600) * 1000;
+  if (data.refresh_token) tokens.refresh_token = data.refresh_token;
+  await writeTokensToDrive(driveToken, tokens);
 
   return data.access_token;
+}
+
+async function readTokensFromDrive(driveToken) {
+  // Search for tokens file by name in Drive
+  const searchResp = await new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'www.googleapis.com',
+      path:     '/drive/v3/files?q=' + encodeURIComponent('name="' + TOKENS_FILE_NAME + '" and trashed=false') + '&fields=files(id)',
+      headers:  { Authorization: 'Bearer ' + driveToken },
+    };
+    https.get(opts, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(JSON.parse(d)));
+    }).on('error', reject);
+  });
+
+  const files = searchResp.files || [];
+  if (files.length === 0) return null;
+
+  const fileId = files[0].id;
+  const content = await downloadFile(driveToken, fileId);
+  return JSON.parse(content.toString('utf8'));
+}
+
+async function writeTokensToDrive(driveToken, tokens) {
+  const json = JSON.stringify(tokens);
+  const buf  = Buffer.from(json, 'utf8');
+
+  // Check if file exists
+  const searchResp = await new Promise((resolve, reject) => {
+    const opts = {
+      hostname: 'www.googleapis.com',
+      path:     '/drive/v3/files?q=' + encodeURIComponent('name="' + TOKENS_FILE_NAME + '" and trashed=false') + '&fields=files(id)',
+      headers:  { Authorization: 'Bearer ' + driveToken },
+    };
+    https.get(opts, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(JSON.parse(d)));
+    }).on('error', reject);
+  });
+
+  const files = searchResp.files || [];
+
+  if (files.length > 0) {
+    // Update existing file
+    await uploadFile(driveToken, files[0].id, buf);
+  } else {
+    // Create new file
+    await new Promise((resolve, reject) => {
+      const boundary = 'gl_boundary';
+      const meta = JSON.stringify({ name: TOKENS_FILE_NAME, mimeType: 'application/json' });
+      const body = Buffer.concat([
+        Buffer.from('--' + boundary + '\r\nContent-Type: application/json\r\n\r\n'),
+        Buffer.from(meta),
+        Buffer.from('\r\n--' + boundary + '\r\nContent-Type: application/json\r\n\r\n'),
+        buf,
+        Buffer.from('\r\n--' + boundary + '--'),
+      ]);
+      const opts = {
+        hostname: 'www.googleapis.com',
+        path:     '/upload/drive/v3/files?uploadType=multipart',
+        method:   'POST',
+        headers:  {
+          Authorization:   'Bearer ' + driveToken,
+          'Content-Type':  'multipart/related; boundary=' + boundary,
+          'Content-Length': body.length,
+        },
+      };
+      const req = https.request(opts, (res) => {
+        let d = '';
+        res.on('data', c => d += c);
+        res.on('end', () => resolve(d));
+      });
+      req.on('error', reject);
+      req.write(body);
+      req.end();
+    });
+  }
 }
 
 async function setNetlifyEnvVar(key, value) {
