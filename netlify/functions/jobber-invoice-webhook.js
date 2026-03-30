@@ -288,7 +288,55 @@ async function getJobberToken() {
 
   if (!data.access_token) throw new Error('Token refresh failed: ' + JSON.stringify(data));
   console.log('Jobber token refreshed OK');
+
+  // Jobber rotates the refresh token on each use — update it in Netlify
+  if (data.refresh_token && data.refresh_token !== CFG.REFRESH_TOKEN) {
+    console.log('Refresh token rotated — updating Netlify env var');
+    await updateNetlifyRefreshToken(data.refresh_token).catch(e =>
+      console.error('Failed to update refresh token in Netlify:', e.message)
+    );
+  }
+
   return data.access_token;
+}
+
+async function updateNetlifyRefreshToken(newToken) {
+  const siteId     = process.env.NETLIFY_SITE_ID;
+  const netlifyPat = process.env.NETLIFY_ACCESS_TOKEN;
+  if (!siteId || !netlifyPat) return; // silently skip if not configured
+
+  const body = JSON.stringify([{ value: newToken, context: 'all' }]);
+
+  // Try PATCH first (update existing), then POST (create new)
+  const patch = await netlifyEnvReq('PATCH', siteId, netlifyPat, 'JOBBER_REFRESH_TOKEN', body);
+  if (patch === 404) {
+    const postBody = JSON.stringify([{ key: 'JOBBER_REFRESH_TOKEN', values: [{ value: newToken, context: 'all' }] }]);
+    await netlifyEnvReq('POST', siteId, netlifyPat, null, postBody);
+  }
+}
+
+function netlifyEnvReq(method, siteId, token, key, body) {
+  return new Promise((resolve) => {
+    const path = key
+      ? `/api/v1/sites/${siteId}/env/${key}`
+      : `/api/v1/sites/${siteId}/env`;
+    const req = https.request({
+      hostname: 'api.netlify.com',
+      path, method,
+      headers: {
+        'Authorization':  'Bearer ' + token,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => resolve(res.statusCode));
+    });
+    req.on('error', () => resolve(500));
+    req.write(body);
+    req.end();
+  });
 }
 
 async function fetchInvoice(token, invoiceId) {
