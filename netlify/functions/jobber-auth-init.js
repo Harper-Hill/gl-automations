@@ -49,6 +49,9 @@ exports.handler = async (event) => {
       };
     }
 
+    // PATCH JOBBER_REFRESH_TOKEN in Netlify automatically
+    await patchNetlifyRefreshToken(data.refresh_token);
+
     // Show the refresh token so the user can add it to Netlify
     return {
       statusCode: 200,
@@ -93,6 +96,34 @@ function getRedirectUri(event) {
   const host  = event.headers['x-forwarded-host'] || event.headers.host;
   const proto = event.headers['x-forwarded-proto'] || 'https';
   return `${proto}://${host}${REDIRECT_PATH}`;
+}
+
+async function patchNetlifyRefreshToken(token) {
+  const siteId = process.env.NETLIFY_SITE_ID;
+  const pat    = process.env.NETLIFY_ACCESS_TOKEN;
+  if (!siteId || !pat) return;
+  const body = JSON.stringify([{ value: token, context: 'all' }]);
+  return new Promise((resolve) => {
+    const req = https.request({
+      hostname: 'api.netlify.com',
+      path:     `/api/v1/sites/${siteId}/env/JOBBER_REFRESH_TOKEN`,
+      method:   'PATCH',
+      headers:  {
+        Authorization:    'Bearer ' + pat,
+        'Content-Type':   'application/json',
+        'Content-Length': Buffer.byteLength(body),
+      },
+    }, (res) => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => {
+        console.log('Netlify PATCH status:', res.statusCode, d.substring(0, 100));
+        resolve();
+      });
+    });
+    req.on('error', resolve);
+    req.write(body);
+    req.end();
+  });
 }
 
 function post(hostname, path, body) {
