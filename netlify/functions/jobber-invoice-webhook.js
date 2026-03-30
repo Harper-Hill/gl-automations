@@ -135,8 +135,9 @@ exports.handler = async (event) => {
       return { statusCode: 200, body: 'OK - no changes' };
     }
 
-    // 10. Write back to xlsx
-    const newWs = XLSX.utils.aoa_to_sheet(aoa, { cellDates: false });
+    // 10. Sort by Posted Date then write back
+    const sortedAoa = sortDataRows(aoa);
+    const newWs = XLSX.utils.aoa_to_sheet(sortedAoa, { cellDates: false });
     if (ws['!cols'])   newWs['!cols']   = ws['!cols'];
     if (ws['!rows'])   newWs['!rows']   = ws['!rows'];
     if (ws['!merges']) newWs['!merges'] = ws['!merges'];
@@ -424,6 +425,56 @@ function b64u(str) {
     .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
 }
 
+
+
+// ================================================================
+// SORT DATA ROWS BY DATE (col A), then rebuild formula positions
+// ================================================================
+function sortDataRows(aoa) {
+  if (aoa.length <= 2) return aoa;
+
+  const header = aoa[0];
+  const data   = aoa.slice(1);
+
+  // Parse DD/MM/YYYY → timestamp for sorting
+  function parseDate(str) {
+    const m = String(str || '').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if (!m) return 0;
+    return new Date(parseInt(m[3]), parseInt(m[2]) - 1, parseInt(m[1])).getTime();
+  }
+
+  data.sort((a, b) => parseDate(a[COL.POSTED_DATE]) - parseDate(b[COL.POSTED_DATE]));
+
+  // Find a formula template for each formula column from any data row
+  const templates = {};
+  for (const row of data) {
+    for (const col of FORMULA_COLS) {
+      if (!templates[col]) {
+        const val = row[col];
+        if (typeof val === 'string' && val.startsWith('=')) {
+          templates[col] = val;
+        }
+      }
+    }
+    if (Object.keys(templates).length === FORMULA_COLS.length) break;
+  }
+
+  // Rebuild each row's formulas at its new Excel row position
+  data.forEach((row, i) => {
+    const excelRow = i + 2; // header = row 1, data starts at row 2
+    FORMULA_COLS.forEach(col => {
+      const template = templates[col];
+      if (!template) return;
+      // Find the highest row number in the template — that's the row it came from
+      const nums = [...template.matchAll(/[A-Z]+(\d+)/g)].map(m => parseInt(m[1]));
+      if (!nums.length) return;
+      const templateRow = Math.max(...nums);
+      row[col] = shiftFormula(template, templateRow, excelRow);
+    });
+  });
+
+  return [header, ...data];
+}
 
 // ================================================================
 // HELPERS
