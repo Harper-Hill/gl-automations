@@ -482,7 +482,13 @@ function sortDataRows(aoa) {
   if (aoa.length <= 2) return aoa;
 
   const header = aoa[0];
-  const data   = aoa.slice(1);
+
+  // Only keep rows that have content — drop empty trailing rows
+  const data = aoa.slice(1).filter(row =>
+    String(row[COL.INVOICE_NO]   || '').trim() ||
+    String(row[COL.POSTED_DATE]  || '').trim() ||
+    String(row[COL.COUNTERPARTY] || '').trim()
+  );
 
   // Parse DD/MM/YYYY → timestamp for sorting
   function parseDate(str) {
@@ -507,13 +513,12 @@ function sortDataRows(aoa) {
     if (Object.keys(templates).length === FORMULA_COLS.length) break;
   }
 
-  // Rebuild each row's formulas at its new Excel row position
+  // Rebuild each row\'s formulas at its correct new Excel row position
   data.forEach((row, i) => {
     const excelRow = i + 2; // header = row 1, data starts at row 2
     FORMULA_COLS.forEach(col => {
       const template = templates[col];
       if (!template) return;
-      // Find the highest row number in the template — that's the row it came from
       const nums = [...template.matchAll(/[A-Z]+(\d+)/g)].map(m => parseInt(m[1]));
       if (!nums.length) return;
       const templateRow = Math.max(...nums);
