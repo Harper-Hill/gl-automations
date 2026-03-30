@@ -237,6 +237,7 @@ async function getJobberToken() {
 async function readConfigToken(googleToken) {
   const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1`;
   const resp = await sheetsGet(googleToken, url);
+  console.log('Config!B1 response:', JSON.stringify(resp).substring(0, 200));
   return resp.values && resp.values[0] && resp.values[0][0] ? resp.values[0][0].trim() : null;
 }
 
