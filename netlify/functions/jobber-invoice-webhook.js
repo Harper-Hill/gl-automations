@@ -65,12 +65,11 @@ exports.handler = async (event) => {
   }
 
   try {
-    const jobberToken = await getJobberToken();
+    const { accessToken: jobberToken, googleToken } = await getJobberToken();
     const invoice     = await fetchInvoice(jobberToken, invoiceId);
     if (!invoice) { console.log('Invoice not found'); return { statusCode: 200, body: 'OK - not found' }; }
     console.log('Fetched invoice:', invoice.invoiceNumber);
 
-    const googleToken = await getGoogleToken();
     const rows        = await readSheet(googleToken);
     console.log('Sheet rows:', rows.length);
 
@@ -215,17 +214,35 @@ function sheetsRequest(method, token, url, body) {
 }
 
 async function getJobberToken() {
-  if (!CFG.REFRESH_TOKEN) throw new Error('JOBBER_REFRESH_TOKEN not set');
-  const body = ['client_id='+encodeURIComponent(CFG.CLIENT_ID),'client_secret='+encodeURIComponent(CFG.CLIENT_SECRET),'grant_type=refresh_token','refresh_token='+encodeURIComponent(CFG.REFRESH_TOKEN)].join('&');
+  // Read refresh token from Config sheet (cell B1) — survives redeploys
+  const googleToken   = await getGoogleToken();
+  const refreshToken  = await readConfigToken(googleToken);
+  if (!refreshToken) throw new Error('No refresh token in Config sheet B1');
+
+  const body = ['client_id='+encodeURIComponent(CFG.CLIENT_ID),'client_secret='+encodeURIComponent(CFG.CLIENT_SECRET),'grant_type=refresh_token','refresh_token='+encodeURIComponent(refreshToken)].join('&');
   const resp = await httpsPost('api.getjobber.com', '/api/oauth/token', body, { 'Content-Type': 'application/x-www-form-urlencoded' });
   let data; try { data = JSON.parse(resp); } catch(e) { throw new Error('Token not JSON: ' + resp.substring(0,100)); }
   if (!data.access_token) throw new Error('Token failed: ' + JSON.stringify(data));
   console.log('Jobber token OK');
-  if (data.refresh_token && data.refresh_token !== CFG.REFRESH_TOKEN) {
-    console.log('Rotating refresh token');
-    await updateNetlifyEnv('JOBBER_REFRESH_TOKEN', data.refresh_token).catch(e => console.error('Rotation failed:', e.message));
+
+  // Write rotated refresh token back to Config sheet
+  if (data.refresh_token && data.refresh_token !== refreshToken) {
+    console.log('Rotating refresh token in Config sheet');
+    await writeConfigToken(googleToken, data.refresh_token).catch(e => console.error('Token write failed:', e.message));
   }
-  return data.access_token;
+
+  return { accessToken: data.access_token, googleToken };
+}
+
+async function readConfigToken(googleToken) {
+  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1`;
+  const resp = await sheetsGet(googleToken, url);
+  return resp.values && resp.values[0] && resp.values[0][0] ? resp.values[0][0].trim() : null;
+}
+
+async function writeConfigToken(googleToken, token) {
+  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent('Config!B1')}?valueInputOption=RAW`;
+  await sheetsRequest('PUT', googleToken, url, JSON.stringify({ range: 'Config!B1', values: [[token]] }));
 }
 
 async function fetchInvoice(token, invoiceId) {
