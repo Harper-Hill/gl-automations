@@ -101,26 +101,35 @@ function getRedirectUri(event) {
 async function patchNetlifyRefreshToken(token) {
   const siteId = process.env.NETLIFY_SITE_ID;
   const pat    = process.env.NETLIFY_ACCESS_TOKEN;
-  if (!siteId || !pat) return;
-  const body = JSON.stringify([{ value: token, context: 'all' }]);
+  if (!siteId || !pat) { console.log('No NETLIFY_SITE_ID or NETLIFY_ACCESS_TOKEN'); return; }
+
+  // Try PATCH first (update existing), fall back to POST (create new)
+  const patchBody = JSON.stringify([{ value: token, context: 'all' }]);
+  const status = await netlifyRequest('PATCH', `/api/v1/sites/${siteId}/env/JOBBER_REFRESH_TOKEN`, patchBody, pat);
+  console.log('Netlify PATCH status:', status);
+
+  if (status === 404) {
+    const postBody = JSON.stringify([{ key: 'JOBBER_REFRESH_TOKEN', values: [{ value: token, context: 'all' }] }]);
+    const postStatus = await netlifyRequest('POST', `/api/v1/sites/${siteId}/env`, postBody, pat);
+    console.log('Netlify POST status:', postStatus);
+  }
+}
+
+function netlifyRequest(method, path, body, pat) {
   return new Promise((resolve) => {
     const req = https.request({
       hostname: 'api.netlify.com',
-      path:     `/api/v1/sites/${siteId}/env/JOBBER_REFRESH_TOKEN`,
-      method:   'PATCH',
-      headers:  {
+      path, method,
+      headers: {
         Authorization:    'Bearer ' + pat,
         'Content-Type':   'application/json',
         'Content-Length': Buffer.byteLength(body),
       },
     }, (res) => {
       let d = ''; res.on('data', c => d += c);
-      res.on('end', () => {
-        console.log('Netlify PATCH status:', res.statusCode, d.substring(0, 100));
-        resolve();
-      });
+      res.on('end', () => { console.log(method, path.substring(0,50), res.statusCode, d.substring(0,80)); resolve(res.statusCode); });
     });
-    req.on('error', resolve);
+    req.on('error', () => resolve(500));
     req.write(body);
     req.end();
   });
