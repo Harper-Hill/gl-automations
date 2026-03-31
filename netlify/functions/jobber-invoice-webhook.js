@@ -151,7 +151,8 @@ async function reconcile(googleToken, sheetRow, existing, m) {
   const existingTotal   = parseFloat(existing[COL.TOTAL] || 0);
   const existingName    = String(existing[COL.COUNTERPARTY] || '').trim().toLowerCase();
   const existingDatePaid = String(existing[COL.DATE_PAID] || '').trim();
-  const totalOk = Math.abs(existingTotal - m.total) < 0.02;
+  // existingTotal may be NaN if the cell contains a formula — treat that as a match
+  const totalOk = isNaN(existingTotal) || Math.abs(existingTotal - m.total) < 0.02;
   const nameOk  = existingName === m.counterparty.toLowerCase();
 
   console.log(`Reconcile row ${sheetRow}: total=${existingTotal} vs ${m.total}, datePaid="${existingDatePaid}" vs "${m.datePaid}"`);
