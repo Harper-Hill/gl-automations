@@ -103,9 +103,11 @@ exports.handler = async (event) => {
 };
 
 function mapInvoice(inv) {
-  const subtotal = parseFloat((inv.amounts && inv.amounts.subtotal)  || 0);
+  const incTotal = parseFloat((inv.amounts && inv.amounts.total)     || 0);
   const tip      = parseFloat((inv.amounts && inv.amounts.tipsTotal) || 0);
-  const total    = round2(subtotal + tip);
+  // Use Jobber's total (inc VAT); fall back to subtotal*1.2 if not present
+  const subtotal = parseFloat((inv.amounts && inv.amounts.subtotal)  || 0);
+  const total    = incTotal > 0 ? round2(incTotal) : round2(subtotal * 1.2 + tip);
   const postedDate = inv.createdAt  ? toDate(inv.createdAt)  : '';
   const taxDate    = inv.issuedDate ? toDate(inv.issuedDate) : postedDate;
   let datePaid = 'Not Yet Paid';
@@ -249,7 +251,7 @@ async function writeSheetToken(googleToken, token) {
 }
 
 async function fetchInvoice(token, invoiceId) {
-  const query = { query: `query { invoice(id: "${invoiceId}") { invoiceNumber subject createdAt issuedDate receivedDate amounts { subtotal tipsTotal } client { name firstName lastName companyName } lineItems { nodes { name description } } customFields { ... on CustomFieldText { label valueText } ... on CustomFieldDropdown { label valueDropdown } } } }` };
+  const query = { query: `query { invoice(id: "${invoiceId}") { invoiceNumber subject createdAt issuedDate receivedDate amounts { subtotal total tipsTotal } client { name firstName lastName companyName } lineItems { nodes { name description } } customFields { ... on CustomFieldText { label valueText } ... on CustomFieldDropdown { label valueDropdown } } } }` };
   const resp = await httpsPost('api.getjobber.com', '/api/graphql', JSON.stringify(query), { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}`, 'X-JOBBER-GRAPHQL-VERSION': CFG.API_VERSION });
   let data; try { data = JSON.parse(resp); } catch(e) { throw new Error('Jobber API not JSON'); }
   if (data.errors) console.error('GraphQL errors:', JSON.stringify(data.errors).substring(0,200));
