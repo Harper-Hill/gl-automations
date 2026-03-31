@@ -148,26 +148,37 @@ function buildRow(m, r) {
 }
 
 async function reconcile(googleToken, sheetRow, existing, m) {
-  const existingTotal = parseFloat(existing[COL.TOTAL] || 0);
-  const existingName  = String(existing[COL.COUNTERPARTY] || '').trim().toLowerCase();
+  const existingTotal   = parseFloat(existing[COL.TOTAL] || 0);
+  const existingName    = String(existing[COL.COUNTERPARTY] || '').trim().toLowerCase();
+  const existingDatePaid = String(existing[COL.DATE_PAID] || '').trim();
   const totalOk = Math.abs(existingTotal - m.total) < 0.02;
   const nameOk  = existingName === m.counterparty.toLowerCase();
+
+  console.log(`Reconcile row ${sheetRow}: total=${existingTotal} vs ${m.total}, datePaid="${existingDatePaid}" vs "${m.datePaid}"`);
+
   if (!totalOk || !nameOk) {
     await updateCell(googleToken, `${CFG.SHEET_TAB}!Q${sheetRow}`, `⚠️ REVIEW: Jobber Total=${m.total}, Name="${m.counterparty}" — sheet Total=${existingTotal}, Name="${existingName}"`);
     console.log(`Invoice ${m.invoiceNo}: flagged`);
     return;
   }
+
   let changed = false;
-  if (m.datePaid !== 'Not Yet Paid' && String(existing[COL.DATE_PAID] || '').trim() === 'Not Yet Paid') {
+
+  // Update Date Paid + FRS whenever Jobber has a payment date and sheet doesn't match
+  const sheetIsPaid = existingDatePaid !== '' && existingDatePaid !== 'Not Yet Paid';
+  if (m.datePaid !== 'Not Yet Paid' && !sheetIsPaid) {
     await updateCell(googleToken, `${CFG.SHEET_TAB}!L${sheetRow}`, m.frs);
     await updateCell(googleToken, `${CFG.SHEET_TAB}!T${sheetRow}`, m.datePaid);
+    console.log(`Invoice ${m.invoiceNo}: marked paid ${m.datePaid}, FRS=${m.frs}`);
     changed = true;
   }
+
   if (m.domComm && !String(existing[COL.DOM_COMM] || '').trim()) {
     await updateCell(googleToken, `${CFG.SHEET_TAB}!R${sheetRow}`, m.domComm);
     changed = true;
   }
-  console.log(`Invoice ${m.invoiceNo}: ${changed ? 'updated' : 'ok'}`);
+
+  console.log(`Invoice ${m.invoiceNo}: ${changed ? 'updated' : 'ok (no changes needed)'}`);
 }
 
 async function readSheet(token) {
