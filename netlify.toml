@@ -4,3 +4,6 @@
 [functions]
   node_bundler = "esbuild"
   included_files = ["netlify/functions/**"]
+
+[functions.starling-sync]
+  schedule = "0 6 * * *"
