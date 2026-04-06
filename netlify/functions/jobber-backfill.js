@@ -71,7 +71,7 @@ async function getJobberToken(googleToken) {
 async function fetchRecentInvoices(jobberToken, hoursAgo) {
   const since = new Date(Date.now() - hoursAgo * 60 * 60 * 1000).toISOString();
   const query = `{
-    invoices(filter: { createdAt: { gte: "${since}" } }) {
+    invoices(filter: { createdAt: { after: "${since}" } }) {
       nodes {
         id
         invoiceNumber
@@ -79,9 +79,8 @@ async function fetchRecentInvoices(jobberToken, hoursAgo) {
         issuedDate
         total
         client { name companyName }
-        job { jobNumber title }
+        jobs { nodes { jobNumber title } }
         lineItems { nodes { name quantity unitPrice } }
-        payments { nodes { amount paidAt } }
       }
     }
   }`;
@@ -104,9 +103,10 @@ function mapInvoiceRow(inv) {
   const postedDate = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB') : '';
   const taxDate = inv.issuedDate ? new Date(inv.issuedDate).toLocaleDateString('en-GB') : postedDate;
   const client = inv.client ? (inv.client.companyName || inv.client.name || '') : '';
-  const desc = inv.job ? `${inv.job.jobNumber} – ${inv.job.title}` : (inv.lineItems && inv.lineItems.nodes.length ? inv.lineItems.nodes[0].name : '');
+  const job = inv.jobs && inv.jobs.nodes && inv.jobs.nodes[0];
+  const desc = job ? `${job.jobNumber} – ${job.title}` : (inv.lineItems && inv.lineItems.nodes.length ? inv.lineItems.nodes[0].name : '');
   const total = parseFloat(inv.total || 0).toFixed(2);
-  const datePaid = inv.payments && inv.payments.nodes.length ? new Date(inv.payments.nodes[inv.payments.nodes.length-1].paidAt).toLocaleDateString('en-GB') : '';
+  const datePaid = '';
   const row = new Array(20).fill('');
   row[0] = postedDate;
   row[1] = taxDate;
