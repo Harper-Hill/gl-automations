@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "gl-automations",
+  "private_key_id": "b7404de8119af86eabb91eb9d87d0e1cef480199",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDdooYaKxhEsKVM\nBQyGpJmvtfViOR9aVV4QopiIyOEsfVbCLX/HooGUNwHQmTaw5U5n2mjUWWNQYlD/\nkVWYh7B6O9lzuOyfh/zI0TFZl/Nmi/RacRCRksDMAuPLP2nO6zKutozX+eO240na\nLmtdqudcmDm2TrMjOVtPh105t8mZx3Fi5cAEDcLWVw5Z2/LyWjkPgEdFl7f9bLeN\nsi7Mhy1XmJf7NYBIkuIrYmm5ft/nyST6TtWq409qOYae8DN+Xt0q9bWRI+3J+shy\njR2PKJDkZGetn5b1aNxxis4ZOd20fyrXh4M0AWUPxdss7N6zVnExXMnguoAlv1XS\nLSsFa7fbAgMBAAECggEAFM3v6ElETr+wJynQKlwNax+ESF3pUgRHv1MBSNG7xVPX\nTtnmL+SoD4l2+6WY1dO9349yc1XCtfsh9E4oVULjb3iVFGuhlpC1dgT2V3J6hWqS\nG41Cdg/AVkYtK4PT2E8JTmTSEBH5F06lkjv06xwi+fT2HJAC+Rr7YG8/R9mMgd6N\n+U4OleioKQDDxiVJWGpgvrrKI8N0OQlu32hum3FtnArCVMYyBaZboqbwVcJk7F1g\nucbKfW5P1FXPi+Pdda2ssjkZkpS4t7dFAfFkswa80Ij4yW80rgTRcSqMc64bT9Ep\nbTOUH0jOwipj+xkmZ8Csihhxbh+dLwkwvTqIfQXLFQKBgQDxRp+YX+9TFywZbUsI\nXfiENJgjsdwzx6flvQR5ZwtLOnu3ksQNAbthdhlHEJUFYFeDR3LyxKgeq5KZzsEx\nBFECrXT1Kj9HN5Uyfcw3BbwsrXR4EM5CKB0YVwV4LzG597w6sb1ssvb9hqlZbwF8\ndrYxb698p+n3ncGN69UlgqC+ZwKBgQDrKQ4ZU9KArwuvuzd9Ml9QXhzx9SOdC/t2\nR1ycJirWq9UHbufyVFt7enDiRLSPTwKd21rvemzvgmA27r0Xe5929/dmhdr2jIQW\nD8kiVPxm6HvSE+b8hCj+F8LHtgFieRlNzgMgb0K7zeR3zbopYDkeTUcI/l+UyYDa\nL3YkCDxqbQKBgQDCk2XZiGSE6ccSqmU8Viw40gFvp9whlf389DZLgaJGBOAI5z9c\nDe2DZ65y9Rh4wX1RzakRxy6drVgI2ghK82QxeJk9rdhiIp0bnv+1z9Y1YZzvxv3P\ntHHiUyuCBO1hQDx4SSauJpWxV4vzJ+ZW7ZV4wM0RBolUu9CAF5RJL9NaOQKBgQDC\nVltgcvUzg3WU9JMW09oRALXK/1s/Hffh93eBU8lzPu3+BpmImk4/7R/83eqZxCHV\ncsHjxrjf9k6tFv8NuQw/tQyvnU8nEVjXIpSF2tX79YTeR7RMWqvF0L0XbkIWrx1K\nP0Y2N7xel/iHSWzfZLXPZO2fcRhsTVo+9ZocjPHgwQKBgCwwKiWgVAR6UThx/7am\nTmsjMyaQNNQKTInPnVm90Z0QKgjIS5GavrtmYvAZSlNqDDaWhSCoRW7NWLO3MYLk\nj7tOQ2bXXSqZAvhapW1aVvA+tK+BGeTyv6VCJFHrZQdICp6p+CGtzlPxafCDFazN\ntvOMH+ewmrT3/KyyVi3QwUGS\n-----END PRIVATE KEY-----\n",
+  "client_email": "gl-automations@gl-automations.iam.gserviceaccount.com",
+  "client_id": "116864928523058675152",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/gl-automations%40gl-automations.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}
