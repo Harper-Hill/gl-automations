@@ -93,7 +93,8 @@ function mapIncomeRow(charge) {
   const description = charge.description || 'Stripe payment';
   const row = new Array(20).fill('');
   row[0]=d; row[1]=d; row[2]=customer; row[3]=description;
-  row[4]='Stripe'; row[5]=charge.id; row[7]='Commercial'; row[8]=amount; row[19]=charge.id;
+  row[4]='Stripe'; row[5]=charge.id; row[7]='SALES'; row[8]=amount;
+  row[17]='Domestic'; row[19]=d;
   return row;
 }
 function mapFeeRow(charge) {
@@ -115,7 +116,7 @@ exports.handler = async () => {
     const sinceIso = (cfgData.values && cfgData.values[0] && cfgData.values[0][0]) || new Date(new Date().getFullYear(),0,1).toISOString();
     const sinceUnix = Math.floor(new Date(sinceIso).getTime() / 1000);
     console.log('Syncing since:', sinceIso);
-    const existingIncomeIds = await getExistingIds(gToken, CFG.INCOME_TAB, 'T');
+    const existingIncomeIds = await getExistingIds(gToken, CFG.INCOME_TAB, 'F');
     const existingExpenseIds = await getExistingIds(gToken, CFG.EXPENSES_TAB, 'T');
     const charges = await getAllCharges(sinceUnix);
     const successful = charges.filter(c => c.status === 'succeeded' && !c.refunded);
