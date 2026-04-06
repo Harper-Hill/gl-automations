@@ -10,6 +10,26 @@
 const crypto = require('crypto');
 const https  = require('https');
 
+async function fetchServiceAccount() {
+  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA parse: ' + d.substring(0,100))); } });
+    }).on('error', reject);
+  });
+}
+
+async function fetchServiceAccount() {
+  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
+  return new Promise((resolve, reject) => {
+    https.get(url, (res) => {
+      let d = ''; res.on('data', c => d += c);
+      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA parse: ' + d.substring(0,100))); } });
+    }).on('error', reject);
+  });
+}
+
 const CFG = {
   CLIENT_ID:      process.env.JOBBER_GL_CLIENT_ID,
   CLIENT_SECRET:  process.env.JOBBER_GL_CLIENT_SECRET,
@@ -271,7 +291,7 @@ async function fetchInvoice(token, invoiceId) {
 }
 
 async function getGoogleToken() {
-  const sa = JSON.parse(Buffer.from(process.env.GOOGLE_SA_B64_1 + process.env.GOOGLE_SA_B64_2, 'base64').toString('utf8'));
+  const sa = await fetchServiceAccount();
   const now = Math.floor(Date.now() / 1000);
   const claim = { iss: sa.client_email, scope: 'https://www.googleapis.com/auth/spreadsheets', aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now };
   const jwt = buildJWT(sa.private_key, claim);
