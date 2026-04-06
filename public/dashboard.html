@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HH Dashboard">
+<meta name="theme-color" content="#3d6b44">
+<title>Harper Hill Dashboard</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+:root{
+  --bg:#0f1110;--surface:#161a18;--border:#2a3030;--text:#e8e4dc;--muted:#a8b8ac;
+  --dim:#6b7a6e;--faint:#4a5e50;--green:#3d6b44;--green-lt:#5a9e68;--green-dk:#233028;
+  --red:#c05c4a;--red-dk:#2e1a18;--safe-top:env(safe-area-inset-top,0px);
+  --safe-bot:env(safe-area-inset-bottom,0px);--nav-h:60px;
+}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:'DM Mono',monospace;overflow-x:hidden}
+body{display:flex;flex-direction:column}
+/* Header */
+.hdr{background:var(--surface);border-bottom:1px solid var(--border);padding:calc(12px + var(--safe-top)) 20px 12px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.logo{display:flex;align-items:center;gap:10px}
+.lmark{width:34px;height:34px;background:var(--green);border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.lmark svg{width:18px;height:18px}
+.lname{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;line-height:1.2}
+.lsub{font-size:9px;color:var(--dim);letter-spacing:.15em;text-transform:uppercase}
+.hdr-r{display:flex;align-items:center;gap:8px}
+.live-dot{width:7px;height:7px;background:var(--green-lt);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.hdr-time{font-size:11px;color:var(--dim)}
+/* Scroll area */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(var(--nav-h) + var(--safe-bot) + 16px)}
+/* Bottom nav */
+.bnav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe-bot));background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:8px;padding-bottom:var(--safe-bot);z-index:100}
+.bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;border:none;background:none;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;min-height:44px;transition:color .15s}
+.bnav-btn.active{color:var(--green-lt)}
+.bnav-icon{width:20px;height:20px}
+/* Sections */
+.section{display:none}.section.active{display:block}
+/* Labels */
+.slabel{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;font-family:'Syne',sans-serif}
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
+/* Metrics grid */
+.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
+.mlabel{font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px}
+.mval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);line-height:1}
+.mval.pos{color:var(--green-lt)}.mval.neg{color:var(--red)}
+.msub{font-size:10px;color:var(--dim);margin-top:5px}
+.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin-top:5px}
+.badge.up{background:#1a2e1e;color:var(--green-lt)}.badge.dn{background:var(--red-dk);color:var(--red)}
+.prog{margin-top:8px;background:#1e2420;border-radius:2px;height:3px}
+.prog-fill{background:var(--green);height:3px;border-radius:2px;transition:width .6s}
+/* Info icon + tooltip */
+.info-wrap{position:relative;display:inline-flex;align-items:center;gap:5px}
+.info-btn{width:16px;height:16px;border-radius:50%;background:#233028;border:none;color:var(--green-lt);font-size:10px;font-family:'DM Mono',monospace;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;line-height:1}
+.tooltip{display:none;position:absolute;bottom:calc(100% + 6px);left:50%;transform:translateX(-50%);background:#1a2a1e;border:1px solid #2a4030;border-radius:6px;padding:8px 10px;font-size:11px;color:var(--muted);line-height:1.5;width:220px;z-index:200;pointer-events:none}
+.tooltip::after{content:'';position:absolute;top:100%;left:50%;transform:translateX(-50%);border:5px solid transparent;border-top-color:#2a4030}
+.info-btn:focus+.tooltip,.info-btn.open+.tooltip{display:block}
+/* Goals */
+.goals-list{display:flex;flex-direction:column;gap:8px}
+.goal{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted);line-height:1.5;padding:10px 12px;background:#111614;border-radius:6px;border:1px solid var(--border)}
+.goal-n{width:22px;height:22px;background:var(--green-dk);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green-lt);font-weight:500;flex-shrink:0}
+/* Expense breakdown */
+.exp-bar{margin-bottom:8px}
+.exp-row{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.exp-label{font-size:11px;color:var(--muted);flex:1;display:flex;align-items:center;gap:4px}
+.exp-pct{font-size:11px;color:var(--text);font-weight:500;min-width:38px;text-align:right}
+.exp-val{font-size:10px;color:var(--dim);min-width:58px;text-align:right}
+.exp-track{background:#1e2420;border-radius:2px;height:3px;margin-bottom:2px}
+.exp-fill{background:var(--green);height:3px;border-radius:2px}
+/* Split */
+.split{display:grid;grid-template-columns:1fr 1fr;gap:0}
+.split-item{padding:12px 0}
+.split-item:first-child{border-right:1px solid var(--border);padding-right:14px}
+.split-item:last-child{padding-left:14px}
+.split-label{font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:5px}
+.split-val{font-family:'Syne',sans-serif;font-size:16px;font-weight:700}
+.split-sub{font-size:10px;color:var(--dim);margin-top:3px}
+hr.div{border:none;border-top:1px solid var(--border);margin:12px 0}
+/* Prices */
+.prow{display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #1a1e1c;font-size:11px}
+.prow:last-child{border:none}
+.pname{color:var(--muted);flex:1;padding-right:8px}
+.pval{color:var(--text);font-weight:500;white-space:nowrap}
+.pdiff{font-size:9px;padding:2px 5px;border-radius:3px;margin-left:6px;white-space:nowrap}
+.pdiff.up{background:#1a2e1e;color:var(--green-lt)}.pdiff.flat{background:#1e2420;color:var(--dim)}
+/* Chart */
+.chart-wrap{position:relative;width:100%;height:180px;margin-top:8px}
+.legend{display:flex;gap:14px;margin-bottom:10px}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)}
+.ldot{width:10px;height:10px;border-radius:2px}
+/* Loading/error */
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;gap:12px;color:var(--faint);font-size:12px;letter-spacing:.1em}
+.spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.error-msg{color:var(--red);font-size:12px;text-align:center;padding:20px}
+/* Pull to refresh indicator */
+.ptr{display:flex;align-items:center;justify-content:center;height:0;overflow:hidden;transition:height .2s;color:var(--faint);font-size:11px;gap:8px}
+.ptr.visible{height:40px}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div class="logo">
+    <div class="lmark">
+      <svg viewBox="0 0 18 18" fill="none">
+        <path d="M3 15L9 4l6 11" stroke="#7abf85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M5.5 11h7" stroke="#7abf85" stroke-width="1.5" stroke-linecap="round"/>
+      </svg>
+    </div>
+    <div>
+      <div class="lname">Harper Hill</div>
+      <div class="lsub">Grounds & Gardens</div>
+    </div>
+  </div>
+  <div class="hdr-r">
+    <div class="live-dot" id="live-dot"></div>
+    <div class="hdr-time" id="hdr-time"></div>
+  </div>
+</div>
+
+<div class="scroll" id="scroll">
+  <div class="ptr" id="ptr"><div class="spinner" style="width:16px;height:16px;border-width:2px"></div> Refreshing...</div>
+
+  <!-- OVERVIEW section -->
+  <div class="section active" id="sec-overview">
+    <div id="overview-content"><div class="loading"><div class="spinner"></div>Loading live data...</div></div>
+  </div>
+
+  <!-- EXPENSES section -->
+  <div class="section" id="sec-expenses">
+    <div id="expenses-content"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+  </div>
+
+  <!-- PRICES section -->
+  <div class="section" id="sec-prices">
+    <div class="slabel">2026 Service Rates (inc. VAT)</div>
+    <div class="card">
+      <div class="prow"><span class="pname">Gardening staff hour — commercial</span><span class="pval">£50.40<span class="pdiff flat">0%</span></span></div>
+      <div class="prow"><span class="pname">Gardening staff hour — domestic</span><span class="pval">£43.22<span class="pdiff flat">0%</span></span></div>
+      <div class="prow"><span class="pname">Staff day — commercial</span><span class="pval">£330.00<span class="pdiff up">+10%</span></span></div>
+      <div class="prow"><span class="pname">Staff day — domestic</span><span class="pval">£270.00<span class="pdiff up">+8%</span></span></div>
+      <div class="prow"><span class="pname">Hedge trim & waste (m²)</span><span class="pval">£1.74<span class="pdiff up">+7.4%</span></span></div>
+      <div class="prow"><span class="pname">Small plan maintenance</span><span class="pval">£96.50<span class="pdiff up">+16%</span></span></div>
+      <div class="prow"><span class="pname">Medium plan maintenance</span><span class="pval">£177.50<span class="pdiff up">+8.4%</span></span></div>
+      <div class="prow"><span class="pname">Large plan maintenance</span><span class="pval">£264.50<span class="pdiff up">+8%</span></span></div>
+      <div class="prow"><span class="pname">Very large plan maintenance</span><span class="pval">£353.00<span class="pdiff up">+8.3%</span></span></div>
+      <div class="prow"><span class="pname">Green waste — bulk bag</span><span class="pval">£27.00<span class="pdiff up">+3.8%</span></span></div>
+      <div class="prow"><span class="pname">Green waste — trailer (~2.6m³)</span><span class="pval">£150.00<span class="pdiff up">+4.2%</span></span></div>
+      <div class="prow"><span class="pname">Herbicide spray (1L)</span><span class="pval">£3.60<span class="pdiff up">+9.1%</span></span></div>
+      <div class="prow"><span class="pname">Woodchipper supplement / hr</span><span class="pval">£24.00<span class="pdiff up">+33%</span></span></div>
+      <div class="prow"><span class="pname">PAS 100 mulch — trailer</span><span class="pval">£130.00<span class="pdiff up">+4%</span></span></div>
+    </div>
+  </div>
+
+  <!-- GOALS section -->
+  <div class="section" id="sec-goals">
+    <div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div>
+  </div>
+</div>
+
+<!-- Bottom nav -->
+<nav class="bnav">
+  <button class="bnav-btn active" id="btn-overview" onclick="switchTab('overview')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+      <rect x="2" y="2" width="7" height="7" rx="1.5"/>
+      <rect x="11" y="2" width="7" height="7" rx="1.5"/>
+      <rect x="2" y="11" width="7" height="7" rx="1.5"/>
+      <rect x="11" y="11" width="7" height="7" rx="1.5"/>
+    </svg>
+    Overview
+  </button>
+  <button class="bnav-btn" id="btn-expenses" onclick="switchTab('expenses')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="10" cy="10" r="8"/>
+      <path d="M10 2v8l4 4"/>
+    </svg>
+    Expenses
+  </button>
+  <button class="bnav-btn" id="btn-prices" onclick="switchTab('prices')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+      <path d="M3 10h14M3 5h14M3 15h9"/>
+    </svg>
+    Rates
+  </button>
+  <button class="bnav-btn" id="btn-goals" onclick="switchTab('goals')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">
+      <circle cx="10" cy="10" r="7"/>
+      <circle cx="10" cy="10" r="3"/>
+      <path d="M10 3v2M10 15v2M3 10h2M15 10h2"/>
+    </svg>
+    Goals
+  </button>
+</nav>
+
+<script>
+const fmt = v => '£' + Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtFull = v => (v<0?'−':'') + '£' + Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+let revenueChart = null;
+let cachedData = null;
+
+function switchTab(tab) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.bnav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('sec-' + tab).classList.add('active');
+  document.getElementById('btn-' + tab).classList.add('active');
+  if (revenueChart) { revenueChart.resize(); }
+}
+
+function info(text) {
+  return `<button class="info-btn" onclick="toggleTip(this)" aria-label="More info">i</button><div class="tooltip">${text}</div>`;
+}
+function toggleTip(btn) {
+  const wasOpen = btn.classList.contains('open');
+  document.querySelectorAll('.info-btn.open').forEach(b => b.classList.remove('open'));
+  if (!wasOpen) btn.classList.add('open');
+}
+document.addEventListener('click', e => {
+  if (!e.target.classList.contains('info-btn')) document.querySelectorAll('.info-btn.open').forEach(b => b.classList.remove('open'));
+});
+
+function renderOverview(d) {
+  const rev = d.revenue;
+  const progress = Math.min(Math.round((rev.ytd2026 / 160000) * 100), 100);
+  const gpMargin = rev.ytd2026 > 0 ? ((d.grossProfit.ytd2026 / rev.ytd2026) * 100).toFixed(1) : '0.0';
+  const domPct = rev.ytd2026 > 0 ? ((d.domestic.ytd / rev.ytd2026)*100).toFixed(1) : '0';
+  const comPct = rev.ytd2026 > 0 ? ((d.commercial.ytd / rev.ytd2026)*100).toFixed(1) : '0';
+  const npPos = d.netProfit.ytd2026 >= 0;
+
+  document.getElementById('overview-content').innerHTML = `
+    <div class="slabel">Year to date — 2026</div>
+    <div class="mgrid">
+      <div class="metric">
+        <div class="mlabel">Total Revenue <span class="info-wrap">${info('All money received from clients for jobs and services completed')}</span></div>
+        <div class="mval">${fmt(rev.ytd2026)}</div>
+        <div class="prog"><div class="prog-fill" style="width:${progress}%"></div></div>
+        <div class="msub">${progress}% of £160k target</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Gross Profit <span class="info-wrap">${info('Revenue minus the direct costs of doing the work — before paying for overheads like vehicles, insurance and office costs')}</span></div>
+        <div class="mval pos">${fmtFull(d.grossProfit.ytd2026)}</div>
+        <div class="badge up">${gpMargin}% margin</div>
+        <div class="msub">2025: ${fmtFull(d.grossProfit.ytd2025)}</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Net Profit <span class="info-wrap">${info('What the business actually keeps after paying ALL costs — the bottom line')}</span></div>
+        <div class="mval ${npPos?'pos':'neg'}">${fmtFull(d.netProfit.ytd2026)}</div>
+        <div class="badge ${npPos?'up':'dn'}">${npPos?'profit':'loss'}</div>
+        <div class="msub">2025: ${fmtFull(d.netProfit.ytd2025)}</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">2025 vs 2026 <span class="info-wrap">${info('How this year\'s revenue compares to the same period last year')}</span></div>
+        <div class="mval ${rev.ytd2026 >= rev.ytd2025?'pos':'neg'}">${rev.ytd2025>0?(((rev.ytd2026-rev.ytd2025)/rev.ytd2025)*100).toFixed(0):'—'}%</div>
+        <div class="msub">vs ${fmt(rev.ytd2025)} in 2025</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="slabel">Monthly Revenue</div>
+      <div class="legend">
+        <div class="legend-item"><div class="ldot" style="background:#3d6b44"></div>2026</div>
+        <div class="legend-item"><div class="ldot" style="background:#233028"></div>2025</div>
+      </div>
+      <div class="chart-wrap"><canvas id="revChart"></canvas></div>
+    </div>
+
+    <div class="card">
+      <div class="slabel">Revenue split</div>
+      <div class="split">
+        <div class="split-item">
+          <div class="split-label">Domestic</div>
+          <div class="split-val">${fmt(d.domestic.ytd)}</div>
+          <div class="split-sub">${domPct}% of total</div>
+        </div>
+        <div class="split-item">
+          <div class="split-label">Commercial</div>
+          <div class="split-val">${fmt(d.commercial.ytd)}</div>
+          <div class="split-sub">${comPct}% of total</div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  if (revenueChart) revenueChart.destroy();
+  revenueChart = new Chart(document.getElementById('revChart'), {
+    type: 'bar',
+    data: {
+      labels: rev.monthly2026.map(m => m.month),
+      datasets: [
+        { label:'2026', data: rev.monthly2026.map(m => m.value), backgroundColor:'#3d6b44', borderRadius:2 },
+        { label:'2025', data: rev.monthly2025.map(m => m.value), backgroundColor:'#233028', borderRadius:2 },
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false} },
+      scales:{
+        x:{ ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},autoSkip:false}, grid:{color:'#1e2420'} },
+        y:{ ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},callback:v=>'£'+(v/1000).toFixed(0)+'k'}, grid:{color:'#1e2420'} }
+      }
+    }
+  });
+}
+
+function renderExpenses(d) {
+  const exp = d.expenses;
+  const maxPct = Math.max(...exp.breakdown.map(e => e.pct));
+  document.getElementById('expenses-content').innerHTML = `
+    <div class="slabel">Where the money goes</div>
+    <div class="mgrid">
+      <div class="metric">
+        <div class="mlabel">Total Expenses <span class="info-wrap">${info('Everything the business spends — direct costs plus overheads')}</span></div>
+        <div class="mval neg">${fmt(exp.total)}</div>
+        <div class="msub">YTD 2026</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Cost of Sales <span class="info-wrap">${info('Costs directly tied to completing jobs — labour, materials, VAT owed')}</span></div>
+        <div class="mval">${fmt(exp.costOfSales)}</div>
+        <div class="msub">${exp.total>0?((exp.costOfSales/exp.total)*100).toFixed(0):0}% of total spend</div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="slabel">Breakdown by type</div>
+      ${exp.breakdown.map(e => `
+        <div class="exp-bar">
+          <div class="exp-row">
+            <span class="exp-label">${e.label} <span class="info-wrap">${info(e.info)}</span></span>
+            <span class="exp-val">${fmt(e.value)}</span>
+            <span class="exp-pct">${e.pct}%</span>
+          </div>
+          <div class="exp-track"><div class="exp-fill" style="width:${maxPct>0?(e.pct/maxPct*100).toFixed(1):0}%"></div></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+function renderGoals(d) {
+  const goals = d.goals.length ? d.goals : [
+    'Reduce debt down to zero',
+    'Achieve tax profitability',
+    'Reduce broken machine % to 0%',
+    'Achieve revenue forecast of £160,000'
+  ];
+  document.getElementById('goals-content').innerHTML = `
+    <div class="slabel">2026 Annual Goals</div>
+    <div class="goals-list">
+      ${goals.map((g,i) => `<div class="goal"><div class="goal-n">${i+1}</div><span>${g}</span></div>`).join('')}
+    </div>
+    <div style="margin-top:16px">
+      <div class="slabel">Revenue Goal Progress</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+          <span style="font-size:12px;color:var(--muted)">£160,000 target</span>
+          <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--green-lt)">${fmt(d.revenue.ytd2026)}</span>
+        </div>
+        <div class="prog" style="height:6px;border-radius:3px">
+          <div class="prog-fill" style="height:6px;border-radius:3px;width:${Math.min(Math.round((d.revenue.ytd2026/160000)*100),100)}%"></div>
+        </div>
+        <div style="font-size:10px;color:var(--dim);margin-top:6px">${Math.min(Math.round((d.revenue.ytd2026/160000)*100),100)}% achieved · ${fmt(160000-Math.max(d.revenue.ytd2026,0))} remaining</div>
+      </div>
+    </div>
+  `;
+}
+
+async function loadData(silent) {
+  if (!silent) {
+    document.getElementById('live-dot').style.background = '#4a5e50';
+  }
+  try {
+    const res = await fetch('/.netlify/functions/dashboard-data');
+    const d = await res.json();
+    if (d.error) throw new Error(d.error);
+    cachedData = d;
+    renderOverview(d);
+    renderExpenses(d);
+    renderGoals(d);
+    document.getElementById('hdr-time').textContent = new Date(d.updatedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    document.getElementById('live-dot').style.background = '#5a9e68';
+  } catch(e) {
+    document.getElementById('overview-content').innerHTML = `<div class="error-msg">Could not load data.<br>${e.message}</div>`;
+    document.getElementById('live-dot').style.background = '#c05c4a';
+  }
+}
+
+// Pull to refresh
+let ptStart = 0, ptActive = false;
+const scroll = document.getElementById('scroll');
+const ptr = document.getElementById('ptr');
+scroll.addEventListener('touchstart', e => {
+  if (scroll.scrollTop === 0) { ptStart = e.touches[0].clientY; ptActive = true; }
+}, {passive:true});
+scroll.addEventListener('touchmove', e => {
+  if (!ptActive) return;
+  const dy = e.touches[0].clientY - ptStart;
+  if (dy > 60) ptr.classList.add('visible');
+}, {passive:true});
+scroll.addEventListener('touchend', () => {
+  if (ptr.classList.contains('visible')) {
+    loadData(true);
+    setTimeout(() => ptr.classList.remove('visible'), 1200);
+  }
+  ptActive = false;
+});
+
+// Service worker
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}
+
+// Install prompt
+let installPrompt;
+window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); installPrompt = e; });
+
+loadData();
+setInterval(() => loadData(true), 300000);
+</script>
+</body>
+</html>
