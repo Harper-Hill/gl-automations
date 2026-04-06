@@ -11,13 +11,16 @@ const crypto = require('crypto');
 const https  = require('https');
 
 async function fetchServiceAccount() {
-  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA parse: ' + d.substring(0,100))); } });
-    }).on('error', reject);
-  });
+  function get(url) {
+    return new Promise((resolve, reject) => {
+      https.get(url, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location).then(resolve).catch(reject);
+        let d = ''; res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA parse: ' + d.substring(0,100))); } });
+      }).on('error', reject);
+    });
+  }
+  return get(process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN);
 }
 
 const CFG = {
