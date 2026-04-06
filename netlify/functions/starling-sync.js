@@ -87,6 +87,7 @@ async function starling(path) {
 
 function mapTx(tx, source) {
   if (tx.direction !== 'OUT') return null;
+  if (tx.source === 'INTERNAL_TRANSFER') return null;
   const d = tx.transactionTime ? new Date(tx.transactionTime).toLocaleDateString('en-GB') : '';
   const amt = tx.amount ? (tx.amount.minorUnits/100).toFixed(2) : '0.00';
   const cpty = tx.counterPartyName || tx.reference || '';
