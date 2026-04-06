@@ -7,3 +7,6 @@
 
 [functions.starling-sync]
   schedule = "0 6 * * *"
+
+[functions.stripe-sync]
+  schedule = "0 6 * * *"
