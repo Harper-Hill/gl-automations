@@ -20,16 +20,6 @@ async function fetchServiceAccount() {
   });
 }
 
-async function fetchServiceAccount() {
-  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
-  return new Promise((resolve, reject) => {
-    https.get(url, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA parse: ' + d.substring(0,100))); } });
-    }).on('error', reject);
-  });
-}
-
 const CFG = {
   CLIENT_ID:      process.env.JOBBER_GL_CLIENT_ID,
   CLIENT_SECRET:  process.env.JOBBER_GL_CLIENT_SECRET,
