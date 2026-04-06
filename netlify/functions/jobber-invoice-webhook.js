@@ -271,7 +271,7 @@ async function fetchInvoice(token, invoiceId) {
 }
 
 async function getGoogleToken() {
-  const sa = JSON.parse(Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8'));
+  const sa = JSON.parse(Buffer.from(process.env.GOOGLE_SA_B64_1 + process.env.GOOGLE_SA_B64_2, 'base64').toString('utf8'));
   const now = Math.floor(Date.now() / 1000);
   const claim = { iss: sa.client_email, scope: 'https://www.googleapis.com/auth/spreadsheets', aud: 'https://oauth2.googleapis.com/token', exp: now + 3600, iat: now };
   const jwt = buildJWT(sa.private_key, claim);
