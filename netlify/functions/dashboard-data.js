@@ -42,6 +42,10 @@ async function gToken(sa) {
 }
 async function get(token, range) {
   const r = await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(range)}`, method:'GET', headers:{Authorization:`Bearer ${token}`} });
+  if (r.error) {
+    console.error('Sheets API error for', range, ':', JSON.stringify(r.error));
+    throw new Error(`Sheets API ${r.error.code}: ${r.error.message}`);
+  }
   return (r.values || []);
 }
 function n(v) { return parseFloat(String(v).replace(/,/g,'')) || 0; }
