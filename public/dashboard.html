@@ -244,16 +244,44 @@ function renderOverview(d){
   });
 }
 function renderExpenses(d){
-  const exp=d.expenses,maxP=Math.max(...exp.breakdown.map(e=>e.pct),1);
+  const exp=d.expenses;
+  const colors=['#3d6b44','#1a3d2b','#2a5c38','#4a8a54','#5aa060','#6b8f70','#2a3a2e','#1e2e22','#3a5040','#4a6050'];
   document.getElementById('expenses-content').innerHTML=`
     <div class="slabel">Where the money goes</div>
     <div class="mgrid">
       <div class="metric"><div class="mlabel">Total Expenses ${ib('Everything the business spends — direct costs plus overheads')}</div><div class="mval neg">${fmt(exp.total)}</div><div class="msub">YTD 2026</div></div>
       <div class="metric"><div class="mlabel">Cost of Sales ${ib('Costs directly tied to completing jobs — labour, materials, VAT')}</div><div class="mval">${fmt(exp.costOfSales)}</div><div class="msub">${exp.total>0?((exp.costOfSales/exp.total)*100).toFixed(0):0}% of spend</div></div>
     </div>
-    <div class="card"><div class="slabel">Breakdown by type</div>
-    ${exp.breakdown.map(e=>`<div class="exp-bar"><div class="exp-row"><span class="exp-label">${e.label} ${ib(e.info)}</span><span class="exp-val">${fmt(e.value)}</span><span class="exp-pct">${e.pct}%</span></div><div class="exp-track"><div class="exp-fill" style="width:${(e.pct/maxP*100).toFixed(1)}%"></div></div></div>`).join('')}
+    <div class="card">
+      <div class="slabel">Breakdown by type</div>
+      <div style="position:relative;width:100%;max-width:260px;margin:0 auto 16px"><canvas id="pieChart"></canvas></div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${exp.breakdown.map((e,i)=>`
+          <div style="display:flex;align-items:center;gap:8px;font-size:11px">
+            <div style="width:10px;height:10px;border-radius:2px;flex-shrink:0;background:${colors[i%10]}"></div>
+            <span style="flex:1;color:var(--muted)">${e.label} ${ib(e.info)}</span>
+            <span style="color:var(--dim);min-width:54px;text-align:right">${fmt(e.value)}</span>
+            <span style="color:var(--text);font-weight:500;min-width:34px;text-align:right">${e.pct}%</span>
+          </div>`).join('')}
+      </div>
     </div>`;
+  const nonZero=exp.breakdown.filter(e=>e.value>0);
+  if(nonZero.length>0){
+    new Chart(document.getElementById('pieChart'),{
+      type:'doughnut',
+      data:{
+        labels:nonZero.map(e=>e.label),
+        datasets:[{data:nonZero.map(e=>e.value),backgroundColor:colors.slice(0,nonZero.length),borderColor:'#0f1110',borderWidth:2,hoverOffset:6}]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:true,cutout:'58%',
+        plugins:{
+          legend:{display:false},
+          tooltip:{callbacks:{label:ctx=>' '+ctx.label+': '+fmt(ctx.parsed)+' ('+((ctx.parsed/exp.total)*100).toFixed(1)+'%)'}}
+        }
+      }
+    });
+  }
 }
 function renderGoals(d){
   const goals=d.goals.length?d.goals:['Reduce debt down to zero','Achieve tax profitability','Reduce broken machine % to 0%','Achieve revenue forecast of £160,000'];
