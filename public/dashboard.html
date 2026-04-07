@@ -107,22 +107,15 @@ body{display:flex;flex-direction:column}
   <div class="section active" id="sec-overview"><div id="overview-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-expenses"><div id="expenses-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-prices">
-    <div class="slabel">2026 Service Rates (inc. VAT)</div>
-    <div class="card">
-      <div class="prow"><span class="pname">Gardening staff hour — commercial</span><span class="pval">£50.40<span class="pdiff flat">0%</span></span></div>
-      <div class="prow"><span class="pname">Gardening staff hour — domestic</span><span class="pval">£43.22<span class="pdiff flat">0%</span></span></div>
-      <div class="prow"><span class="pname">Staff day — commercial</span><span class="pval">£330.00<span class="pdiff up">+10%</span></span></div>
-      <div class="prow"><span class="pname">Staff day — domestic</span><span class="pval">£270.00<span class="pdiff up">+8%</span></span></div>
-      <div class="prow"><span class="pname">Hedge trim &amp; waste (m²)</span><span class="pval">£1.74<span class="pdiff up">+7.4%</span></span></div>
-      <div class="prow"><span class="pname">Small plan maintenance</span><span class="pval">£96.50<span class="pdiff up">+16%</span></span></div>
-      <div class="prow"><span class="pname">Medium plan maintenance</span><span class="pval">£177.50<span class="pdiff up">+8.4%</span></span></div>
-      <div class="prow"><span class="pname">Large plan maintenance</span><span class="pval">£264.50<span class="pdiff up">+8%</span></span></div>
-      <div class="prow"><span class="pname">Very large plan maintenance</span><span class="pval">£353.00<span class="pdiff up">+8.3%</span></span></div>
-      <div class="prow"><span class="pname">Green waste — bulk bag</span><span class="pval">£27.00<span class="pdiff up">+3.8%</span></span></div>
-      <div class="prow"><span class="pname">Green waste — trailer</span><span class="pval">£150.00<span class="pdiff up">+4.2%</span></span></div>
-      <div class="prow"><span class="pname">Herbicide spray (1L)</span><span class="pval">£3.60<span class="pdiff up">+9.1%</span></span></div>
-      <div class="prow"><span class="pname">Woodchipper supplement / hr</span><span class="pval">£24.00<span class="pdiff up">+33%</span></span></div>
-      <div class="prow"><span class="pname">PAS 100 mulch — trailer</span><span class="pval">£130.00<span class="pdiff up">+4%</span></span></div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+      <div class="slabel" style="margin:0">Service Rates (inc. VAT)</div>
+      <div style="display:flex;background:#1e2420;border-radius:6px;padding:2px;gap:2px">
+        <button id="yr26" onclick="setPriceYear(2026)" style="font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:var(--green);color:#fff;transition:all .15s">2026</button>
+        <button id="yr25" onclick="setPriceYear(2025)" style="font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:transparent;color:var(--faint);transition:all .15s">2025</button>
+      </div>
+    </div>
+    <div class="card" id="price-card">
+      <!-- populated by setPriceYear -->
     </div>
   </div>
   <div class="section" id="sec-goals"><div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
@@ -310,6 +303,52 @@ async function loadData(silent){
     document.getElementById('live-dot').style.background='#c05c4a';
   }
 }
+
+const PRICES = {
+  2026: [
+    ['Gardening staff hour — commercial', '£50.40'],
+    ['Gardening staff hour — domestic',   '£43.22'],
+    ['Staff day — commercial',            '£330.00'],
+    ['Staff day — domestic',              '£270.00'],
+    ['Hedge trim & waste (m²)',            '£1.74'],
+    ['Small plan maintenance',                '£96.50'],
+    ['Medium plan maintenance',               '£177.50'],
+    ['Large plan maintenance',                '£264.50'],
+    ['Very large plan maintenance',           '£353.00'],
+    ['Green waste — bulk bag',            '£27.00'],
+    ['Green waste — trailer',             '£150.00'],
+    ['Herbicide spray (1L)',                  '£3.60'],
+    ['Woodchipper supplement / hr',           '£24.00'],
+    ['PAS 100 mulch — trailer',           '£130.00'],
+  ],
+  2025: [
+    ['Gardening staff hour — commercial', '£50.40'],
+    ['Gardening staff hour — domestic',   '£43.20'],
+    ['Staff day — commercial',            '£300.00'],
+    ['Staff day — domestic',              '£250.00'],
+    ['Hedge trim & waste (m²)',            '£1.62'],
+    ['Small plan maintenance',                '£86.50'],
+    ['Medium plan maintenance',               '£170.29'],
+    ['Large plan maintenance',                '£254.66'],
+    ['Very large plan maintenance',           '£338.86'],
+    ['Green waste — bulk bag',            '£26.00'],
+    ['Green waste — trailer',             '£144.00'],
+    ['Herbicide spray (1L)',                  '£3.30'],
+    ['Woodchipper supplement / hr',           '£18.00'],
+    ['PAS 100 mulch — trailer',           '£125.00'],
+  ]
+};
+function setPriceYear(yr){
+  document.getElementById('yr26').style.background = yr===2026 ? 'var(--green)' : 'transparent';
+  document.getElementById('yr26').style.color = yr===2026 ? '#fff' : 'var(--faint)';
+  document.getElementById('yr25').style.background = yr===2025 ? 'var(--green)' : 'transparent';
+  document.getElementById('yr25').style.color = yr===2025 ? '#fff' : 'var(--faint)';
+  document.getElementById('price-card').innerHTML = PRICES[yr].map(r=>
+    `<div class="prow"><span class="pname">${r[0]}</span><span class="pval">${r[1]}</span></div>`
+  ).join('');
+}
+setPriceYear(2026);
+
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.getElementById('hdr-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 loadData();
