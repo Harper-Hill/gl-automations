@@ -22,12 +22,15 @@ body{display:flex;flex-direction:column}
 .logo-img{width:36px;height:36px;object-fit:contain}
 .lname{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;line-height:1.2}
 .lsub{font-size:9px;color:var(--dim);letter-spacing:.15em;text-transform:uppercase}
-.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:2px}
-.hdr-sync{display:flex;align-items:center;gap:6px}
+.hdr-r{display:flex;flex-direction:column;align-items:flex-end;gap:3px}
+.hdr-top{display:flex;align-items:center;gap:8px}
 .live-dot{width:7px;height:7px;background:var(--green-lt);border-radius:50%;animation:pulse 2s infinite;flex-shrink:0}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
 .hdr-time{font-size:11px;color:var(--dim)}
+.hdr-bot{display:flex;align-items:center;gap:6px}
 .hdr-label{font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+.refresh-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s,border-color .15s}
+.refresh-btn:active{color:var(--green-lt);border-color:var(--green)}
 .scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:16px 16px calc(var(--nav-h) + var(--safe-bot) + 16px)}
 .bnav{position:fixed;bottom:0;left:0;right:0;height:calc(var(--nav-h) + var(--safe-bot));background:var(--surface);border-top:1px solid var(--border);display:flex;align-items:flex-start;padding-top:8px;padding-bottom:var(--safe-bot);z-index:100}
 .bnav-btn{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:4px 0;cursor:pointer;border:none;background:none;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;letter-spacing:.08em;text-transform:uppercase;min-height:44px;transition:color .15s}
@@ -36,13 +39,14 @@ body{display:flex;flex-direction:column}
 .section{display:none}.section.active{display:block}
 .slabel{font-size:9px;letter-spacing:.2em;text-transform:uppercase;color:var(--faint);margin:0 0 12px;font-family:'Syne',sans-serif}
 .card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px;margin-bottom:12px}
-.mgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.metric{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px}
-.mlabel{font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:3px}
-.mval{font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--text);line-height:1}
+.mcols{display:flex;flex-direction:column;gap:10px;margin-bottom:12px}
+.metric{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px 16px}
+.mlabel{font-size:9px;color:var(--faint);letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px;display:flex;align-items:center;gap:3px}
+.mval{font-family:'Syne',sans-serif;font-size:24px;font-weight:700;color:var(--text);line-height:1}
 .mval.pos{color:var(--green-lt)}.mval.neg{color:var(--red)}
 .msub{font-size:10px;color:var(--dim);margin-top:5px}
-.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin-top:5px}
+.mprev{font-size:10px;color:var(--faint);margin-top:4px;padding-top:8px;border-top:1px solid var(--border)}
+.badge{display:inline-block;font-size:9px;padding:2px 6px;border-radius:3px;margin-top:6px}
 .badge.up{background:#1a2e1e;color:var(--green-lt)}.badge.dn{background:var(--red-dk);color:var(--red)}
 .prog{margin-top:8px;background:#1e2420;border-radius:2px;height:3px}
 .prog-fill{background:var(--green);height:3px;border-radius:2px;transition:width .6s}
@@ -67,8 +71,6 @@ body{display:flex;flex-direction:column}
 .prow:last-child{border:none}
 .pname{color:var(--muted);flex:1;padding-right:8px}
 .pval{color:var(--text);font-weight:500;white-space:nowrap}
-.pdiff{font-size:9px;padding:2px 5px;border-radius:3px;margin-left:5px}
-.pdiff.up{background:#1a2e1e;color:var(--green-lt)}.pdiff.flat{background:#1e2420;color:var(--dim)}
 .legend{display:flex;gap:14px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
 .legend-item{display:flex;align-items:center;gap:5px;font-size:10px;color:var(--dim)}
 .ldot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
@@ -76,19 +78,31 @@ body{display:flex;flex-direction:column}
 .lline::after{content:'';width:6px;height:6px;background:#5a7a5e;border-radius:50%;position:absolute;top:-2px;left:6px}
 .chart-wrap{position:relative;width:100%;height:220px;margin-top:4px}
 .goals-list{display:flex;flex-direction:column;gap:8px}
-.goal{display:flex;align-items:flex-start;gap:10px;font-size:12px;color:var(--muted);line-height:1.5;padding:10px 12px;background:#111614;border-radius:6px;border:1px solid var(--border)}
-.goal-n{width:22px;height:22px;background:var(--green-dk);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green-lt);font-weight:500;flex-shrink:0}
+.goal{display:flex;flex-direction:column;gap:6px;padding:12px;background:#111614;border-radius:6px;border:1px solid var(--border)}
+.goal-top{display:flex;align-items:flex-start;gap:10px}
+.goal-n{width:22px;height:22px;background:var(--green-dk);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:10px;color:var(--green-lt);font-weight:500;flex-shrink:0;margin-top:1px}
+.goal-text{font-size:12px;color:var(--muted);line-height:1.5;flex:1}
+.goal-status{display:flex;align-items:center;gap:8px;margin-top:2px}
+.goal-badge{font-size:9px;padding:2px 7px;border-radius:3px;white-space:nowrap}
+.goal-badge.on{background:#1a2e1e;color:var(--green-lt)}
+.goal-badge.off{background:var(--red-dk);color:var(--red)}
 .sync-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px}
-.sync-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px}
+.sync-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;cursor:pointer;transition:border-color .15s}
+.sync-card:active,.sync-card.open{border-color:var(--green)}
 .sync-tag{font-size:8px;letter-spacing:.15em;text-transform:uppercase;color:var(--faint);margin-bottom:6px}
 .sync-name{font-size:11px;color:var(--green-lt);font-weight:500;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .sync-desc{font-size:10px;color:var(--muted);margin-bottom:3px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .sync-date{font-size:10px;color:var(--dim);margin-bottom:4px}
 .sync-amt{font-family:'Syne',sans-serif;font-size:14px;font-weight:700;color:var(--text)}
+.sync-detail{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border);grid-column:1/-1}
+.sync-detail.on{display:grid;grid-template-columns:1fr 1fr;gap:4px 12px}
+.sync-detail-row{font-size:10px;padding:3px 0}
+.sync-detail-label{color:var(--faint)}
+.sync-detail-val{color:var(--muted);margin-top:1px}
 .loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:40vh;gap:12px;color:var(--faint);font-size:12px;letter-spacing:.1em}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
-@media(max-width:380px){.mgrid{grid-template-columns:1fr}.sync-grid{grid-template-columns:1fr}}
+@media(max-width:380px){.sync-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -98,8 +112,15 @@ body{display:flex;flex-direction:column}
     <div><div class="lname">Harper Hill</div><div class="lsub">Grounds &amp; Gardens</div></div>
   </div>
   <div class="hdr-r">
-    <div class="hdr-sync"><div class="live-dot" id="live-dot"></div><div class="hdr-time" id="hdr-time"></div></div>
-    <div class="hdr-label">Last synced</div>
+    <div class="hdr-top">
+      <div class="live-dot" id="live-dot"></div>
+      <div class="hdr-time" id="hdr-time"></div>
+    </div>
+    <div class="hdr-bot">
+      <div class="hdr-label">Last synced</div>
+      <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+      <button class="info-btn" onclick="event.stopPropagation();showTip(this,'Refresh the page to pick up any app changes')">i</button>
+    </div>
   </div>
 </div>
 <div class="tip" id="gtip"></div>
@@ -114,9 +135,7 @@ body{display:flex;flex-direction:column}
         <button id="yr25" onclick="setPriceYear(2025)" style="font-family:'DM Mono',monospace;font-size:10px;padding:4px 10px;border:none;border-radius:4px;cursor:pointer;background:transparent;color:var(--faint);transition:all .15s">2025</button>
       </div>
     </div>
-    <div class="card" id="price-card">
-      <!-- populated by setPriceYear -->
-    </div>
+    <div class="card" id="price-card"></div>
   </div>
   <div class="section" id="sec-goals"><div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
 </div>
@@ -141,6 +160,7 @@ body{display:flex;flex-direction:column}
 <script>
 const fmt=v=>'£'+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtF=v=>(v<0?'−':'')+'£'+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+const fmtD=iso=>{if(!iso||iso==='undefined'||iso==='')return '';try{return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}catch(e){return iso;}};
 let chart=null;
 const gtip=document.getElementById('gtip');
 function showTip(btn,txt){
@@ -163,30 +183,51 @@ function switchTab(tab){
   document.getElementById('btn-'+tab).classList.add('active');
   hideTip();if(chart)chart.resize();
 }
-function fmtDate(iso){
-  if(!iso)return '';
-  try{return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}
-  catch(e){return iso;}
+function fmtDate(iso){if(!iso||iso==='undefined'||iso==='')return '—';try{return new Date(iso).toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'});}catch(e){return iso;}}
+
+// Expandable sync cards
+function toggleCard(id){
+  const detail=document.getElementById(id);
+  const card=detail.closest('.sync-expand');
+  const isOpen=detail.classList.contains('on');
+  detail.classList.toggle('on',!isOpen);
+  card.classList.toggle('open',!isOpen);
 }
+
 function renderOverview(d){
   const rev=d.revenue;
   const now=new Date(),curM=now.getMonth();
+  const mn=now.toLocaleString('en-GB',{month:'short'});
   const ytd25sp=rev.monthly2025.slice(0,curM+1).reduce((s,m)=>s+(m.value||0),0);
   const prog=Math.min(Math.round((rev.ytd2026/160000)*100),100);
   const gpm=rev.ytd2026>0?((d.grossProfit.ytd2026/rev.ytd2026)*100).toFixed(1):'0.0';
+  const gpm25=ytd25sp>0?((d.grossProfit.ytd2025/rev.ytd2025)*100).toFixed(1):'0.0';
+  const npPos=d.netProfit.ytd2026>=0;
   const domP=rev.ytd2026>0?((d.domestic.ytd/rev.ytd2026)*100).toFixed(1):'0';
   const comP=rev.ytd2026>0?((d.commercial.ytd/rev.ytd2026)*100).toFixed(1):'0';
-  const npPos=d.netProfit.ytd2026>=0;
-  const yoy=ytd25sp>0?(((rev.ytd2026-ytd25sp)/ytd25sp)*100).toFixed(0):null;
-  const mn=now.toLocaleString('en-GB',{month:'short'});
   const inv=d.lastInvoice, exp=d.lastExpense;
   document.getElementById('overview-content').innerHTML=`
     <div class="slabel">Year to date — 2026</div>
-    <div class="mgrid">
-      <div class="metric"><div class="mlabel">Total Revenue ${ib('All money received from clients for jobs and services completed')}</div><div class="mval">${fmt(rev.ytd2026)}</div><div class="prog"><div class="prog-fill" style="width:${prog}%"></div></div><div class="msub">${prog}% of £160k target</div></div>
-      <div class="metric"><div class="mlabel">Gross Profit ${ib('Revenue minus direct costs of doing the work, before overheads like vehicles and insurance')}</div><div class="mval pos">${fmtF(d.grossProfit.ytd2026)}</div><div class="badge up">${gpm}% margin</div><div class="msub">2025: ${fmtF(d.grossProfit.ytd2025)}</div></div>
-      <div class="metric"><div class="mlabel">Net Profit ${ib('What the business keeps after paying ALL costs')}</div><div class="mval ${npPos?'pos':'neg'}">${fmtF(d.netProfit.ytd2026)}</div><div class="badge ${npPos?'up':'dn'}">${npPos?'profit':'loss'}</div><div class="msub">2025: ${fmtF(d.netProfit.ytd2025)}</div></div>
-      <div class="metric"><div class="mlabel">vs Last Year ${ib('2026 YTD vs same period Jan–'+mn+' in 2025')}</div><div class="mval ${yoy&&Number(yoy)>0?'pos':'neg'}">${yoy!==null?(Number(yoy)>0?'+':'')+yoy+'%':'—%'}</div><div class="msub">Jan–${mn} 2025: ${fmt(ytd25sp)}</div></div>
+    <div class="mcols">
+      <div class="metric">
+        <div class="mlabel">Total Revenue ${ib('All money received from clients for jobs and services completed')}</div>
+        <div class="mval">${fmt(rev.ytd2026)}</div>
+        <div class="prog"><div class="prog-fill" style="width:${prog}%"></div></div>
+        <div class="msub">${prog}% of £160k annual target</div>
+        <div class="mprev">Jan–${mn} 2025: <strong>${fmt(ytd25sp)}</strong></div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Gross Profit ${ib('Revenue minus direct costs of doing the work, before overheads like vehicles and insurance')}</div>
+        <div class="mval pos">${fmtF(d.grossProfit.ytd2026)}</div>
+        <div class="badge up">${gpm}% margin</div>
+        <div class="mprev">Jan–${mn} 2025: <strong>${fmtF(d.grossProfit.ytd2025)}</strong> &middot; ${gpm25}% margin</div>
+      </div>
+      <div class="metric">
+        <div class="mlabel">Net Profit ${ib('What the business keeps after paying ALL costs — the bottom line')}</div>
+        <div class="mval ${npPos?'pos':'neg'}">${fmtF(d.netProfit.ytd2026)}</div>
+        <div class="badge ${npPos?'up':'dn'}">${npPos?'profit':'loss'}</div>
+        <div class="mprev">Jan–${mn} 2025: <strong>${fmtF(d.netProfit.ytd2025)}</strong></div>
+      </div>
     </div>
     <div class="card">
       <div class="slabel">Monthly Revenue — Domestic &amp; Commercial</div>
@@ -205,15 +246,38 @@ function renderOverview(d){
       </div>
     </div>
     <div class="sync-grid">
-      <div class="sync-card">
+      <div class="sync-card sync-expand open" onclick="toggleCard('inv-detail')">
         <div class="sync-tag">Last Invoice</div>
-        ${inv?`<div class="sync-name">${inv.client||'—'}</div><div class="sync-desc">${inv.description||'—'}</div><div class="sync-date">${fmtDate(inv.date)}</div><div class="sync-amt">${fmt(inv.amount)}</div>`:'<div class="sync-desc" style="color:var(--faint)">No data yet</div>'}
+        ${inv?`
+          <div class="sync-name">${inv.client||'—'}</div>
+          <div class="sync-desc">${inv.description||'—'}</div>
+          <div class="sync-date">${fmtDate(inv.date)}</div>
+          <div class="sync-amt">${fmt(inv.amount)}</div>
+          <div class="sync-detail on" id="inv-detail">
+            <div class="sync-detail-row"><div class="sync-detail-label">VAT</div><div class="sync-detail-val">${inv.vat!=null?fmt(inv.vat):'—'}</div></div>
+            <div class="sync-detail-row"><div class="sync-detail-label">Property</div><div class="sync-detail-val">${inv.propertyType||'—'}</div></div>
+            <div class="sync-detail-row"><div class="sync-detail-label">Date paid</div><div class="sync-detail-val">${fmtDate(inv.datePaid)}</div></div>
+            <div class="sync-detail-row" style="grid-column:1/-1"><div class="sync-detail-label">Notes</div><div class="sync-detail-val">${inv.notes||'—'}</div></div>
+          </div>`
+        :'<div class="sync-desc" style="color:var(--faint)">No data yet</div>'}
       </div>
-      <div class="sync-card">
+      <div class="sync-card sync-expand open" onclick="toggleCard('exp-detail')">
         <div class="sync-tag">Last Expense</div>
-        ${exp?`<div class="sync-name">${exp.supplier||'—'}</div><div class="sync-desc">${exp.description||'—'}</div><div class="sync-date">${fmtDate(exp.date)}</div><div class="sync-amt">${fmt(exp.amount)}</div>`:'<div class="sync-desc" style="color:var(--faint)">No data yet</div>'}
+        ${exp?`
+          <div class="sync-name">${exp.supplier||'—'}</div>
+          <div class="sync-desc">${exp.description||'—'}</div>
+          <div class="sync-date">${fmtDate(exp.date)}</div>
+          <div class="sync-amt">${fmt(exp.amount)}</div>
+          <div class="sync-detail on" id="exp-detail">
+            <div class="sync-detail-row"><div class="sync-detail-label">Category</div><div class="sync-detail-val">${exp.category||'—'}</div></div>
+            <div class="sync-detail-row"><div class="sync-detail-label">Tax type</div><div class="sync-detail-val">${exp.taxType||'—'}</div></div>
+            <div class="sync-detail-row"><div class="sync-detail-label">VAT</div><div class="sync-detail-val">${exp.vat!=null?fmt(exp.vat):'—'}</div></div>
+            <div class="sync-detail-row" style="grid-column:1/-1"><div class="sync-detail-label">Notes</div><div class="sync-detail-val">${exp.notes||'—'}</div></div>
+          </div>`
+        :'<div class="sync-desc" style="color:var(--faint)">No data yet</div>'}
       </div>
     </div>`;
+
   const months=rev.monthly2026.map(m=>m.month);
   const domData=(rev.monthlyDom||[]).map(m=>m.value||0);
   const comData=(rev.monthlyCom||[]).map(m=>m.value||0);
@@ -236,12 +300,15 @@ function renderOverview(d){
     }
   });
 }
+
 function renderExpenses(d){
   const exp=d.expenses;
   const colors=['#3d6b44','#1a3d2b','#2a5c38','#4a8a54','#5aa060','#6b8f70','#2a3a2e','#1e2e22','#3a5040','#4a6050'];
+  // Sort breakdown by value descending
+  const sorted=[...exp.breakdown].sort((a,b)=>b.value-a.value);
   document.getElementById('expenses-content').innerHTML=`
     <div class="slabel">Where the money goes</div>
-    <div class="mgrid">
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
       <div class="metric"><div class="mlabel">Total Expenses ${ib('Everything the business spends — direct costs plus overheads')}</div><div class="mval neg">${fmt(exp.total)}</div><div class="msub">YTD 2026</div></div>
       <div class="metric"><div class="mlabel">Cost of Sales ${ib('Costs directly tied to completing jobs — labour, materials, VAT')}</div><div class="mval">${fmt(exp.costOfSales)}</div><div class="msub">${exp.total>0?((exp.costOfSales/exp.total)*100).toFixed(0):0}% of spend</div></div>
     </div>
@@ -249,7 +316,7 @@ function renderExpenses(d){
       <div class="slabel">Breakdown by type</div>
       <div style="position:relative;width:100%;max-width:260px;margin:0 auto 16px"><canvas id="pieChart"></canvas></div>
       <div style="display:flex;flex-direction:column;gap:6px">
-        ${exp.breakdown.map((e,i)=>`
+        ${sorted.map((e,i)=>`
           <div style="display:flex;align-items:center;gap:8px;font-size:11px">
             <div style="width:10px;height:10px;border-radius:2px;flex-shrink:0;background:${colors[i%10]}"></div>
             <span style="flex:1;color:var(--muted)">${e.label} ${ib(e.info)}</span>
@@ -258,7 +325,7 @@ function renderExpenses(d){
           </div>`).join('')}
       </div>
     </div>`;
-  const nonZero=exp.breakdown.filter(e=>e.value>0);
+  const nonZero=sorted.filter(e=>e.value>0);
   if(nonZero.length>0){
     new Chart(document.getElementById('pieChart'),{
       type:'doughnut',
@@ -276,19 +343,109 @@ function renderExpenses(d){
     });
   }
 }
+
 function renderGoals(d){
+  const now=new Date();
+  const dayOfYear=Math.floor((now-new Date(now.getFullYear(),0,0))/(1000*60*60*24));
+  const daysInYear=365;
+  const expectedRev=Math.round((dayOfYear/daysInYear)*160000);
+  const actualRev=d.revenue.ytd2026;
+  const revDiff=actualRev-expectedRev;
+  const onTarget=revDiff>=0;
+  const prog=Math.min(Math.round((actualRev/160000)*100),100);
+
   const goals=d.goals.length?d.goals:['Reduce debt down to zero','Achieve tax profitability','Reduce broken machine % to 0%','Achieve revenue forecast of £160,000'];
-  const prog=Math.min(Math.round((d.revenue.ytd2026/160000)*100),100);
+
+  function goalStatus(g, idx){
+    // Goal 4 = revenue target — we can give precise tracking
+    const isRevGoal = g.toLowerCase().includes('160') || g.toLowerCase().includes('revenue');
+    if(isRevGoal){
+      const badge=`<span class="goal-badge ${onTarget?'on':'off'}">${onTarget?'On target ↑':'Behind ↓'}</span>`;
+      const detail=`<span style="font-size:10px;color:var(--dim)">${onTarget?'£'+Math.abs(revDiff).toLocaleString('en-GB')+' ahead':'£'+Math.abs(revDiff).toLocaleString('en-GB')+' behind expected'} (expected ${fmt(expectedRev)} by today)</span>`;
+      return `${badge}${detail}`;
+    }
+    return '';
+  }
+
   document.getElementById('goals-content').innerHTML=`
     <div class="slabel">2026 Annual Goals</div>
-    <div class="goals-list">${goals.map((g,i)=>`<div class="goal"><div class="goal-n">${i+1}</div><span>${g.replace(/^\d+\.\s*/,'')}</span></div>`).join('')}</div>
-    <div style="margin-top:16px"><div class="slabel">Revenue Goal Progress</div>
-    <div class="card">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><span style="font-size:12px;color:var(--muted)">£160,000 target</span><span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--green-lt)">${fmt(d.revenue.ytd2026)}</span></div>
-      <div class="prog" style="height:6px;border-radius:3px"><div class="prog-fill" style="height:6px;border-radius:3px;width:${prog}%"></div></div>
-      <div style="font-size:10px;color:var(--dim);margin-top:6px">${prog}% achieved · ${fmt(Math.max(160000-d.revenue.ytd2026,0))} remaining</div>
-    </div></div>`;
+    <div class="goals-list">
+      ${goals.map((g,i)=>{
+        const txt=g.replace(/^\d+\.\s*/,'');
+        const status=goalStatus(txt,i);
+        return `<div class="goal">
+          <div class="goal-top"><div class="goal-n">${i+1}</div><div class="goal-text">${txt}</div></div>
+          ${status?`<div class="goal-status">${status}</div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div style="margin-top:16px">
+      <div class="slabel">Revenue Goal Progress</div>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <span style="font-size:12px;color:var(--muted)">£160,000 target</span>
+          <span style="font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--green-lt)">${fmt(actualRev)}</span>
+        </div>
+        <div style="position:relative;background:#1e2420;border-radius:3px;height:6px;margin-bottom:8px">
+          <div style="background:var(--green);height:6px;border-radius:3px;width:${prog}%;transition:width .6s"></div>
+          <!-- Expected marker -->
+          <div style="position:absolute;top:-3px;left:${Math.min((expectedRev/160000)*100,100)}%;width:2px;height:12px;background:var(--faint);border-radius:1px;transform:translateX(-50%)"></div>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:10px;color:var(--dim)">
+          <span>${prog}% achieved</span>
+          <span style="color:var(--faint)">▾ expected ${Math.round((expectedRev/160000)*100)}%</span>
+        </div>
+        <div style="font-size:10px;margin-top:6px;color:${onTarget?'var(--green-lt)':'var(--red)'}">
+          ${onTarget?'↑ £'+Math.abs(revDiff).toLocaleString('en-GB')+' ahead of schedule':'↓ £'+Math.abs(revDiff).toLocaleString('en-GB')+' behind schedule'}
+        </div>
+      </div>
+    </div>`;
 }
+
+// Pricing data
+const PRICES = {
+  2026:[
+    ['Gardening staff hour — commercial','£50.40'],
+    ['Gardening staff hour — domestic','£43.22'],
+    ['Staff day — commercial','£330.00'],
+    ['Staff day — domestic','£270.00'],
+    ['Hedge trim & waste (m²)','£1.74'],
+    ['Small plan maintenance','£96.50'],
+    ['Medium plan maintenance','£177.50'],
+    ['Large plan maintenance','£264.50'],
+    ['Very large plan maintenance','£353.00'],
+    ['Green waste — bulk bag','£27.00'],
+    ['Green waste — trailer','£150.00'],
+    ['Herbicide spray (1L)','£3.60'],
+    ['Woodchipper supplement / hr','£24.00'],
+    ['PAS 100 mulch — trailer','£130.00'],
+  ],
+  2025:[
+    ['Gardening staff hour — commercial','£50.40'],
+    ['Gardening staff hour — domestic','£43.20'],
+    ['Staff day — commercial','£300.00'],
+    ['Staff day — domestic','£250.00'],
+    ['Hedge trim & waste (m²)','£1.62'],
+    ['Small plan maintenance','£86.50'],
+    ['Medium plan maintenance','£170.29'],
+    ['Large plan maintenance','£254.66'],
+    ['Very large plan maintenance','£338.86'],
+    ['Green waste — bulk bag','£26.00'],
+    ['Green waste — trailer','£144.00'],
+    ['Herbicide spray (1L)','£3.30'],
+    ['Woodchipper supplement / hr','£18.00'],
+    ['PAS 100 mulch — trailer','£125.00'],
+  ]
+};
+function setPriceYear(yr){
+  document.getElementById('yr26').style.background=yr===2026?'var(--green)':'transparent';
+  document.getElementById('yr26').style.color=yr===2026?'#fff':'var(--faint)';
+  document.getElementById('yr25').style.background=yr===2025?'var(--green)':'transparent';
+  document.getElementById('yr25').style.color=yr===2025?'#fff':'var(--faint)';
+  document.getElementById('price-card').innerHTML=PRICES[yr].map(r=>`<div class="prow"><span class="pname">${r[0]}</span><span class="pval">${r[1]}</span></div>`).join('');
+}
+setPriceYear(2026);
+
 async function loadData(silent){
   if(!silent)document.getElementById('live-dot').style.background='#4a5e50';
   try{
@@ -303,52 +460,6 @@ async function loadData(silent){
     document.getElementById('live-dot').style.background='#c05c4a';
   }
 }
-
-const PRICES = {
-  2026: [
-    ['Gardening staff hour — commercial', '£50.40'],
-    ['Gardening staff hour — domestic',   '£43.22'],
-    ['Staff day — commercial',            '£330.00'],
-    ['Staff day — domestic',              '£270.00'],
-    ['Hedge trim & waste (m²)',            '£1.74'],
-    ['Small plan maintenance',                '£96.50'],
-    ['Medium plan maintenance',               '£177.50'],
-    ['Large plan maintenance',                '£264.50'],
-    ['Very large plan maintenance',           '£353.00'],
-    ['Green waste — bulk bag',            '£27.00'],
-    ['Green waste — trailer',             '£150.00'],
-    ['Herbicide spray (1L)',                  '£3.60'],
-    ['Woodchipper supplement / hr',           '£24.00'],
-    ['PAS 100 mulch — trailer',           '£130.00'],
-  ],
-  2025: [
-    ['Gardening staff hour — commercial', '£50.40'],
-    ['Gardening staff hour — domestic',   '£43.20'],
-    ['Staff day — commercial',            '£300.00'],
-    ['Staff day — domestic',              '£250.00'],
-    ['Hedge trim & waste (m²)',            '£1.62'],
-    ['Small plan maintenance',                '£86.50'],
-    ['Medium plan maintenance',               '£170.29'],
-    ['Large plan maintenance',                '£254.66'],
-    ['Very large plan maintenance',           '£338.86'],
-    ['Green waste — bulk bag',            '£26.00'],
-    ['Green waste — trailer',             '£144.00'],
-    ['Herbicide spray (1L)',                  '£3.30'],
-    ['Woodchipper supplement / hr',           '£18.00'],
-    ['PAS 100 mulch — trailer',           '£125.00'],
-  ]
-};
-function setPriceYear(yr){
-  document.getElementById('yr26').style.background = yr===2026 ? 'var(--green)' : 'transparent';
-  document.getElementById('yr26').style.color = yr===2026 ? '#fff' : 'var(--faint)';
-  document.getElementById('yr25').style.background = yr===2025 ? 'var(--green)' : 'transparent';
-  document.getElementById('yr25').style.color = yr===2025 ? '#fff' : 'var(--faint)';
-  document.getElementById('price-card').innerHTML = PRICES[yr].map(r=>
-    `<div class="prow"><span class="pname">${r[0]}</span><span class="pval">${r[1]}</span></div>`
-  ).join('');
-}
-setPriceYear(2026);
-
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.getElementById('hdr-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 loadData();
