@@ -166,9 +166,13 @@ exports.handler = async (event) => {
     // Sort the entire sheet by Posted Date
     const gid = process.env.GL_EXPENSES_GID;
     if (gid) {
-      const totalRows = existingRows.length + newRows.length;
-      await sortSheet(googleToken, parseInt(gid), totalRows);
-      console.log('Sheet sorted by Posted Date');
+      try {
+        const totalRows = existingRows.length + newRows.length;
+        await sortSheet(googleToken, parseInt(gid), totalRows);
+        console.log('Sheet sorted by Posted Date');
+      } catch(sortErr) {
+        console.log('Sort skipped:', sortErr.message);
+      }
     }
 
     // Update last sync time
