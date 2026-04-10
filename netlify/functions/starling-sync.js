@@ -180,8 +180,8 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
-    console.error('Starling sync error:', err.message);
-    return { statusCode: 500, body: 'Error: ' + err.message };
+    console.error('Starling sync error:', err.message, err.stack);
+    return { statusCode: 500, body: JSON.stringify({ error: err.message, stack: err.stack }) };
   }
 };
 
@@ -230,7 +230,7 @@ async function fetchSA() {
   const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
   return new Promise((resolve, reject) => {
     function get(u) {
-      require('https').get(u, (res) => {
+      https.get(u, (res) => {
         if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location);
         let d = ''; res.on('data', c => d += c);
         res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA: ' + d.substring(0,100))); } });
