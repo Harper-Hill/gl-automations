@@ -226,8 +226,22 @@ async function starlingGet(path) {
 // ================================================================
 // GOOGLE SHEETS
 // ================================================================
+async function fetchSA() {
+  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
+  return new Promise((resolve, reject) => {
+    function get(u) {
+      require('https').get(u, (res) => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location);
+        let d = ''; res.on('data', c => d += c);
+        res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA: ' + d.substring(0,100))); } });
+      }).on('error', reject);
+    }
+    get(url);
+  });
+}
+
 async function getGoogleToken() {
-  const sa  = JSON.parse(process.env.GOOGLE_SERVICE_ACCOUNT_JSON);
+  const sa = await fetchSA();
   const now = Math.floor(Date.now() / 1000);
   const claim = {
     iss:   sa.client_email,
