@@ -1,371 +1,366 @@
 // ================================================================
 // netlify/functions/starling-sync.js
-// Fetches OUT transactions from all Starling spaces
-// Writes new expenses to the Expenses tab in the Google Sheet
-// Runs daily at 6am (configured in netlify.toml)
-// Also callable via HTTP GET for on-demand sync
+// Fetches Starling OUT transactions since last sync
+// Applies classification rules at write time
+// New rows get light blue fill (needs manual review)
 // ================================================================
-
 'use strict';
 
-const crypto = require('crypto');
-const https  = require('https');
+const https = require('https');
 
 const CFG = {
   STARLING_TOKEN: process.env.STARLING_ACCESS_TOKEN,
   SHEET_ID:       process.env.GL_SHEET_ID,
   EXPENSES_TAB:   process.env.GL_EXPENSES_TAB || 'Expenses',
-  CONFIG_TAB:     'Config',
-  LAST_SYNC_CELL: 'B6', // stores Starling last sync timestamp in Config tab
+  EXPENSES_GID:   parseInt(process.env.GL_EXPENSES_GID, 10),
 };
 
-// Expenses tab column indices (0-based, A=0)
-const COL = {
-  POSTED_DATE:   0,  // A
-  TAX_DATE:      1,  // B
-  SUPPLIER:      2,  // C
-  DESCRIPTION:   3,  // D
-  PAYMENT_TYPE:  4,  // E
-  OVERHEAD:      5,  // F — leave blank
-  SOURCE:        6,  // G — "Starling"
-  EXP_CATEGORY:  7,  // H — leave blank
-  TAX_TYPE:      8,  // I — leave blank
-  CASH_MOVEMENT: 9,  // J — leave blank
-  TOTAL:         10, // K
-  // L-T left blank for manual entry
-};
+// ── Classification rules ──────────────────────────────────────────
+// Applied top-to-bottom, first match wins.
+// field: 'supplier' or 'description' (case-insensitive partial match)
+// expCat: Expenditure Category (col H)
+// taxType: Tax Type (col I) — 'Expense', 'CAPITAL', 'Disallowable', 'Money Transfer'
+// vatType: VAT Type (col N) — 'No VAT', 'Reduced VAT', or '' (standard)
 
-const NUM_COLS = 20; // A–T
+const RULES = [
+  // ── Wages / Salaries ─────────────────────────────────────────
+  { field: 'supplier', match: 'sam barton',          expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'laure jean',          expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'alex honnor',         expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'nadia beele',         expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'peter barus',         expCat: 'Directors Wages',                   taxType: 'Expense',        vatType: 'No VAT' },
 
+  // ── HMRC / Tax ────────────────────────────────────────────────
+  { field: 'supplier', match: 'hmrc',                expCat: 'Money Transfer',                    taxType: 'Money Transfer',  vatType: 'No VAT' },
+  { field: 'supplier', match: 'dvla',                expCat: 'Vehicles (Operating) Fixed Costs',  taxType: 'Expense',        vatType: 'No VAT' },
+
+  // ── Vehicles ──────────────────────────────────────────────────
+  { field: 'supplier', match: 'fuel card',           expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: '' },
+  { field: 'supplier', match: 'nadia beele van',     expCat: 'Vehicles (None Van Costs)',          taxType: 'Expense',        vatType: '' },
+  { field: 'description', match: 'fuel',             expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: '' },
+  { field: 'description', match: 'mileage',          expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: 'No VAT' },
+
+  // ── Van finance / loan ────────────────────────────────────────
+  { field: 'supplier', match: 'van finance',         expCat: 'Loan Interest (Van)',               taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'description', match: 'van finance',      expCat: 'Loan Interest (Van)',               taxType: 'Expense',        vatType: 'No VAT' },
+
+  // ── Capital One (credit card repayments) ─────────────────────
+  { field: 'supplier', match: 'capital one',         expCat: 'Money Transfer',                    taxType: 'Money Transfer',  vatType: 'No VAT' },
+
+  // ── Software / IT ─────────────────────────────────────────────
+  { field: 'supplier', match: 'wix',                 expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'quickbooks',          expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'intuit',              expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: '123 reg',             expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'amazon prime',        expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'pdftoexcel',          expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'sky mobile',          expCat: 'IT Expenses (Operating)',           taxType: 'Expense',        vatType: '' },
+  { field: 'description', match: 'card subscription', expCat: 'Software (Operating)',             taxType: 'Expense',        vatType: '' },
+
+  // ── Insurance ─────────────────────────────────────────────────
+  { field: 'description', match: 'insurance',        expCat: 'Insurance',                         taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'insurance',           expCat: 'Insurance',                         taxType: 'Expense',        vatType: 'No VAT' },
+
+  // ── Tools / Equipment / Supplies ──────────────────────────────
+  { field: 'supplier', match: 'screwfix',            expCat: 'Other (Operating) (Small Tools)',   taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'diamond',             expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'ironmonger',          expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'newhow',              expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'fleetsmart',          expCat: 'Vehicles (Operating) Fixed Costs',  taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'paintnuts',           expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+
+  // ── Amazon (general supplies = COGS) ─────────────────────────
+  { field: 'supplier', match: 'amazon',              expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'ebay',                expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+
+  // ── Property / Rent ───────────────────────────────────────────
+  { field: 'supplier', match: 'rent',                expCat: 'Rent',                              taxType: 'Expense',        vatType: 'No VAT' },
+  { field: 'supplier', match: 'hm land reg',         expCat: 'Other Property Costs',              taxType: 'Expense',        vatType: '' },
+
+  // ── Marketing ─────────────────────────────────────────────────
+  { field: 'supplier', match: 'wix.com',             expCat: 'Marketing & Advertising',           taxType: 'Expense',        vatType: '' },
+
+  // ── Subcontractors / Melvyn Carr ─────────────────────────────
+  { field: 'supplier', match: 'melvyn carr',         expCat: 'Subcontractor Payments (CIS)',      taxType: 'Expense',        vatType: 'No VAT' },
+
+  // ── Shopify / Shopscpb ────────────────────────────────────────
+  { field: 'supplier', match: 'shopscpb',            expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+  { field: 'supplier', match: 'sp shops',            expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+
+  // ── Doorfittings ─────────────────────────────────────────────
+  { field: 'supplier', match: 'doorfittings',        expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+
+  // ── Sheffield County Council ──────────────────────────────────
+  { field: 'supplier', match: 'sheffield',           expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+
+  // ── Sumup / Gecic ─────────────────────────────────────────────
+  { field: 'supplier', match: 'sumup',               expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
+];
+
+function applyRules(supplier, description) {
+  const s = (supplier || '').toLowerCase();
+  const d = (description || '').toLowerCase();
+  for (const rule of RULES) {
+    const haystack = rule.field === 'supplier' ? s : d;
+    if (haystack.includes(rule.match.toLowerCase())) {
+      return { expCat: rule.expCat, taxType: rule.taxType, vatType: rule.vatType };
+    }
+  }
+  return { expCat: '', taxType: '', vatType: '' };
+}
+
+// ── HTTP helpers ──────────────────────────────────────────────────
+function httpsReq(options, body) {
+  return new Promise((resolve, reject) => {
+    const r = https.request(options, res => {
+      let d = '';
+      res.on('data', c => d += c);
+      res.on('end', () => {
+        try { resolve({ status: res.statusCode, data: JSON.parse(d) }); }
+        catch { resolve({ status: res.statusCode, data: d }); }
+      });
+    });
+    r.on('error', reject);
+    if (body) r.write(JSON.stringify(body));
+    r.end();
+  });
+}
+
+function starling(path) {
+  return httpsReq({
+    hostname: 'api.starlingbank.com',
+    path,
+    method: 'GET',
+    headers: { Authorization: `Bearer ${CFG.STARLING_TOKEN}`, Accept: 'application/json' },
+  }).then(r => r.data);
+}
+
+function sheetsGet(token, range) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(range)}`,
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => r.data);
+}
+
+function sheetsPut(token, range, values) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  }, { range, majorDimension: 'ROWS', values });
+}
+
+function sheetsAppend(token, rows) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.EXPENSES_TAB + '!A:T')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  }, { values: rows });
+}
+
+function sheetsBatchUpdate(token, requests) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${CFG.SHEET_ID}:batchUpdate`,
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  }, { requests });
+}
+
+async function getGoogleToken(sa) {
+  const now = Math.floor(Date.now() / 1000);
+  const header = Buffer.from(JSON.stringify({ alg: 'RS256', typ: 'JWT' })).toString('base64url');
+  const payload = Buffer.from(JSON.stringify({
+    iss: sa.client_email,
+    scope: 'https://www.googleapis.com/auth/spreadsheets',
+    aud: 'https://oauth2.googleapis.com/token',
+    exp: now + 3600,
+    iat: now,
+  })).toString('base64url');
+  const { createSign } = require('crypto');
+  const sig = createSign('RSA-SHA256').update(`${header}.${payload}`).sign(sa.private_key, 'base64url');
+  const jwt = `${header}.${payload}.${sig}`;
+  const res = await httpsReq({
+    hostname: 'oauth2.googleapis.com',
+    path: '/token',
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+  }, `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`);
+  // Note: body is URL-encoded string not JSON for this one
+  return res.data.access_token;
+}
+
+// ── Row mapper ────────────────────────────────────────────────────
+// Columns A–T (indices 0–19):
+// 0  Posted Date  | 1  Tax Date    | 2  Supplier     | 3  Description
+// 4  Payment Type | 5  Overhead?   | 6  Source        | 7  Expenditure Category
+// 8  Tax Type     | 9  Cash Movement | 10 Total       | 11 VAT
+// 12 Ex VAT       | 13 VAT Type    | 14–18 (formula cols, leave blank)
+// 19 Transaction ID (dedup)
+
+function mapTx(tx, source) {
+  if (tx.direction !== 'OUT') return null;
+
+  const date = tx.transactionTime
+    ? new Date(tx.transactionTime).toLocaleDateString('en-GB')
+    : '';
+  const amount = tx.amount ? (tx.amount.minorUnits / 100).toFixed(2) : '0.00';
+  const supplier = tx.counterPartyName || '';
+  const description = tx.reference || tx.userNote || '';
+
+  let paymentType = 'Bank Transfer';
+  if (tx.source === 'MASTER_CARD')          paymentType = 'Card';
+  else if (tx.source === 'DIRECT_DEBIT')    paymentType = 'Direct Debit';
+  else if (tx.source === 'STANDING_ORDER')  paymentType = 'Standing Order';
+  else if (tx.source === 'ONLINE_PAYMENT')  paymentType = 'Online Payment';
+
+  const { expCat, taxType, vatType } = applyRules(supplier, description);
+
+  const row = new Array(20).fill('');
+  row[0]  = date;
+  row[1]  = date;
+  row[2]  = supplier;
+  row[3]  = description;
+  row[4]  = paymentType;
+  row[5]  = '';          // Overhead? — manual
+  row[6]  = source;
+  row[7]  = expCat;      // Expenditure Category
+  row[8]  = taxType;     // Tax Type
+  row[9]  = '';          // Cash Movement — manual
+  row[10] = amount;      // Total
+  row[11] = '';          // VAT — manual
+  row[12] = '';          // Ex VAT — manual
+  row[13] = vatType;     // VAT Type
+  row[19] = tx.feedItemUid;
+  return row;
+}
+
+// ── Apply light blue fill to newly appended rows ─────────────────
+async function formatNewRows(token, startRow, count) {
+  if (!CFG.EXPENSES_GID || count === 0) return;
+  // startRow is 0-based (after header row 0). Append adds after existing data.
+  // We get the row index from the append response updatedRange.
+  const requests = [{
+    repeatCell: {
+      range: {
+        sheetId: CFG.EXPENSES_GID,
+        startRowIndex: startRow,
+        endRowIndex: startRow + count,
+        startColumnIndex: 0,
+        endColumnIndex: 20,
+      },
+      cell: {
+        userEnteredFormat: {
+          backgroundColor: { red: 0.8, green: 0.906, blue: 1.0 }, // #CCE8FF light blue
+        },
+      },
+      fields: 'userEnteredFormat.backgroundColor',
+    },
+  }];
+  await sheetsBatchUpdate(token, requests);
+}
+
+// ── Sort Expenses tab by Posted Date (col A) ──────────────────────
+async function sortExpenses(token) {
+  if (!CFG.EXPENSES_GID) return;
+  await sheetsBatchUpdate(token, [{
+    sortRange: {
+      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 1, startColumnIndex: 0, endColumnIndex: 20 },
+      sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
+    },
+  }]);
+}
+
+// ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
-  // Allow both scheduled (no httpMethod) and HTTP GET
   if (event.httpMethod && event.httpMethod !== 'GET') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
-  if (!CFG.STARLING_TOKEN) {
-    return { statusCode: 500, body: 'STARLING_ACCESS_TOKEN not set' };
-  }
-
   try {
-    const googleToken = await getGoogleToken();
+    // 1. Auth
+    const saRaw = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+    const sa = JSON.parse(saRaw);
+    const gToken = await getGoogleToken(sa);
 
-    // Read last sync date from Config!B2
-    const lastSync = await readConfigCell(googleToken, CFG.LAST_SYNC_CELL);
-    const sinceDate = lastSync
-      ? new Date(lastSync)
-      : new Date(new Date().getFullYear(), 0, 1); // default: start of year
+    // 2. Last sync time from Config!B2
+    const cfgRes = await sheetsGet(gToken, 'Config!B2');
+    const since = (cfgRes.values && cfgRes.values[0] && cfgRes.values[0][0])
+      || new Date(new Date().getFullYear(), 0, 1).toISOString();
+    console.log('Syncing since:', since);
 
-    console.log('Syncing Starling transactions since:', sinceDate.toISOString());
+    // 3. Existing transaction IDs (col T) for dedup
+    const idsRes = await sheetsGet(gToken, CFG.EXPENSES_TAB + '!T:T');
+    const existingIds = new Set((idsRes.values || []).flat().filter(Boolean));
 
-    // Get all accounts
-    const accounts = await starlingGet('/api/v2/accounts');
-    if (!accounts.accounts || accounts.accounts.length === 0) {
-      throw new Error('No Starling accounts found');
-    }
+    // 4. Fetch all Starling accounts + spaces
+    const { accounts = [] } = await starling('/api/v2/accounts');
+    if (!accounts.length) throw new Error('No Starling accounts found');
 
-    const allTransactions = [];
-
-    for (const account of accounts.accounts) {
-      const accountUid    = account.accountUid;
-      const defaultCat    = account.defaultCategory;
-      const currencyCode  = account.currency || 'GBP';
-
-      // Main account feed
-      const mainTxns = await fetchTransactions(accountUid, defaultCat, sinceDate);
-      mainTxns.forEach(t => {
-        t._spaceName  = 'Main Account';
-        t._currency   = currencyCode;
-      });
-      allTransactions.push(...mainTxns);
-
-      // Savings spaces
-      try {
-        const spacesResp = await starlingGet(`/api/v2/spaces/${accountUid}/spaces`);
-        const spaces = (spacesResp.savingsGoalList || spacesResp.spaces || []);
-        for (const space of spaces) {
-          const spaceUid  = space.savingsGoalUid || space.spaceUid || space.uid;
-          const spaceName = space.name || 'Space';
-          if (!spaceUid) continue;
-          try {
-            const spaceTxns = await fetchTransactions(accountUid, spaceUid, sinceDate);
-            spaceTxns.forEach(t => {
-              t._spaceName = spaceName;
-              t._currency  = currencyCode;
-            });
-            allTransactions.push(...spaceTxns);
-          } catch (e) {
-            console.log(`Space ${spaceName} feed error:`, e.message);
-          }
-        }
-      } catch (e) {
-        console.log('Spaces fetch error:', e.message);
-      }
-    }
-
-    // Filter OUT only (expenses)
-    const outTxns = allTransactions.filter(t => t.direction === 'OUT');
-    console.log(`Found ${outTxns.length} OUT transactions since last sync`);
-
-    if (outTxns.length === 0) {
-      await writeConfigCell(googleToken, CFG.LAST_SYNC_CELL, new Date().toISOString());
-      return { statusCode: 200, body: 'OK - no new transactions' };
-    }
-
-    // Read existing sheet to get existing transaction IDs (col D contains ref/description which includes uid)
-    // We store the feedItemUid in Notes col (col S, index 18) for deduplication
-    const existingRows = await readSheet(googleToken);
-    const existingUids = new Set();
-    for (let i = 1; i < existingRows.length; i++) {
-      const uid = String(existingRows[i][18] || '').trim(); // col S
-      if (uid) existingUids.add(uid);
-    }
-
-    // Build new rows
+    const syncTime = new Date().toISOString();
     const newRows = [];
-    for (const t of outTxns) {
-      if (existingUids.has(t.feedItemUid)) continue; // skip duplicates
 
-      const amount      = t.amount ? (t.amount.minorUnits / 100) : 0;
-      const postedDate  = t.transactionTime ? toDate(t.transactionTime) : '';
-      const supplier    = t.counterPartyName || '';
-      const description = t.reference || t.userNote || t.feedItemUid;
-      const paymentType = t.paymentSubtype || t.paymentType || '';
-      const space       = t._spaceName || 'Main Account';
-      const source      = `Starling (${space})`;
+    for (const { accountUid, defaultCategory } of accounts) {
+      const { feedItems: txs = [] } = await starling(
+        `/api/v2/feed/account/${accountUid}/category/${defaultCategory}?changesSince=${encodeURIComponent(since)}`
+      );
+      for (const tx of txs) {
+        if (existingIds.has(tx.feedItemUid)) continue;
+        const row = mapTx(tx, 'Starling');
+        if (row) newRows.push(row);
+      }
 
-      const row = new Array(NUM_COLS).fill('');
-      row[COL.POSTED_DATE]  = postedDate;
-      row[COL.TAX_DATE]     = postedDate;
-      row[COL.SUPPLIER]     = supplier;
-      row[COL.DESCRIPTION]  = description;
-      row[COL.PAYMENT_TYPE] = paymentType;
-      row[COL.SOURCE]       = source;
-      row[COL.TOTAL]        = amount;
-      row[18]               = t.feedItemUid; // col S — for deduplication
-      newRows.push(row);
-    }
-
-    if (newRows.length === 0) {
-      console.log('All transactions already in sheet');
-      await writeConfigCell(googleToken, CFG.LAST_SYNC_CELL, new Date().toISOString());
-      return { statusCode: 200, body: 'OK - all already synced' };
-    }
-
-    // Sort by date oldest first
-    newRows.sort((a, b) => {
-      const da = parseDate(a[COL.POSTED_DATE]);
-      const db = parseDate(b[COL.POSTED_DATE]);
-      return da - db;
-    });
-
-    // Append all new rows
-    await appendRows(googleToken, newRows);
-    console.log(`Appended ${newRows.length} new expense rows`);
-
-    // Sort the entire sheet by Posted Date
-    const gid = process.env.GL_EXPENSES_GID;
-    if (gid) {
-      try {
-        const totalRows = existingRows.length + newRows.length;
-        await sortSheet(googleToken, parseInt(gid), totalRows);
-        console.log('Sheet sorted by Posted Date');
-      } catch(sortErr) {
-        console.log('Sort skipped:', sortErr.message);
+      const { savingsGoals: spaces = [] } = await starling(`/api/v2/account/${accountUid}/spaces`);
+      for (const sp of spaces) {
+        if (!sp.savedObjectUid) continue;
+        const { feedItems: stxs = [] } = await starling(
+          `/api/v2/feed/account/${accountUid}/category/${sp.savedObjectUid}?changesSince=${encodeURIComponent(since)}`
+        );
+        for (const tx of stxs) {
+          if (existingIds.has(tx.feedItemUid)) continue;
+          const row = mapTx(tx, `Starling (${sp.name})`);
+          if (row) newRows.push(row);
+        }
       }
     }
 
-    // Update last sync time
-    await writeConfigCell(googleToken, CFG.LAST_SYNC_CELL, new Date().toISOString());
+    console.log(`Found ${newRows.length} new expense rows`);
+
+    // 5. Append + format + sort
+    if (newRows.length > 0) {
+      const appendRes = await sheetsAppend(gToken, newRows);
+
+      // Parse the first appended row index from the updatedRange e.g. "Expenses!A45:T47"
+      let firstNewRow = null;
+      try {
+        const updatedRange = appendRes.data && appendRes.data.updates && appendRes.data.updates.updatedRange;
+        if (updatedRange) {
+          const match = updatedRange.match(/!A(\d+):/);
+          if (match) firstNewRow = parseInt(match[1], 10) - 1; // convert to 0-based
+        }
+      } catch {}
+
+      if (firstNewRow !== null) {
+        await formatNewRows(gToken, firstNewRow, newRows.length);
+      }
+
+      await sortExpenses(gToken);
+    }
+
+    // 6. Update last sync time
+    await sheetsPut(gToken, 'Config!B2', [[syncTime]]);
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ synced: newRows.length, message: `${newRows.length} new expenses added` }),
+      body: JSON.stringify({ ok: true, newRows: newRows.length, since, syncTime }),
     };
 
   } catch (err) {
-    console.error('Starling sync error:', err.message, err.stack);
-    return { statusCode: 500, body: JSON.stringify({ error: err.message, stack: err.stack }) };
+    console.error('Starling sync error:', err);
+    return { statusCode: 500, body: JSON.stringify({ ok: false, error: err.message }) };
   }
 };
-
-
-// ================================================================
-// STARLING API
-// ================================================================
-async function fetchTransactions(accountUid, categoryUid, since) {
-  const minDate = since.toISOString();
-  const maxDate = new Date().toISOString();
-  const path = `/api/v2/feed/account/${accountUid}/category/${categoryUid}/transactions-between`
-    + `?minTransactionTimestamp=${encodeURIComponent(minDate)}`
-    + `&maxTransactionTimestamp=${encodeURIComponent(maxDate)}`;
-  const resp = await starlingGet(path);
-  return resp.feedItems || [];
-}
-
-async function starlingGet(path) {
-  return new Promise((resolve, reject) => {
-    https.get({
-      hostname: 'api.starlingbank.com',
-      path,
-      headers: {
-        Authorization: 'Bearer ' + CFG.STARLING_TOKEN,
-        Accept:        'application/json',
-      },
-    }, (res) => {
-      let d = '';
-      res.on('data', c => d += c);
-      res.on('end', () => {
-        try {
-          const json = JSON.parse(d);
-          if (res.statusCode >= 400) reject(new Error(`Starling ${res.statusCode}: ${d.substring(0, 200)}`));
-          else resolve(json);
-        } catch (e) { reject(new Error('Starling parse error: ' + d.substring(0, 100))); }
-      });
-    }).on('error', reject);
-  });
-}
-
-
-// ================================================================
-// GOOGLE SHEETS
-// ================================================================
-async function fetchSA() {
-  const url = process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN;
-  return new Promise((resolve, reject) => {
-    function get(u) {
-      https.get(u, (res) => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location);
-        let d = ''; res.on('data', c => d += c);
-        res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA: ' + d.substring(0,100))); } });
-      }).on('error', reject);
-    }
-    get(url);
-  });
-}
-
-async function getGoogleToken() {
-  const sa = await fetchSA();
-  const now = Math.floor(Date.now() / 1000);
-  const claim = {
-    iss:   sa.client_email,
-    scope: 'https://www.googleapis.com/auth/spreadsheets',
-    aud:   'https://oauth2.googleapis.com/token',
-    exp:   now + 3600,
-    iat:   now,
-  };
-  const jwt  = buildJWT(sa.private_key, claim);
-  const body = `grant_type=urn%3Aietf%3Aparams%3Aoauth%3Agrant-type%3Ajwt-bearer&assertion=${jwt}`;
-  const resp = await httpsPost('oauth2.googleapis.com', '/token', body, {
-    'Content-Type': 'application/x-www-form-urlencoded',
-  });
-  const data = JSON.parse(resp);
-  if (!data.access_token) throw new Error('Google auth failed');
-  return data.access_token;
-}
-
-async function readSheet(token) {
-  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.EXPENSES_TAB)}`;
-  const resp = await sheetsGet(token, url);
-  return resp.values || [];
-}
-
-async function readConfigCell(token, cell) {
-  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.CONFIG_TAB + '!' + cell)}`;
-  const resp = await sheetsGet(token, url);
-  return resp.values && resp.values[0] && resp.values[0][0] ? resp.values[0][0].trim() : null;
-}
-
-async function writeConfigCell(token, cell, value) {
-  const range = `${CFG.CONFIG_TAB}!${cell}`;
-  const url   = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(range)}?valueInputOption=RAW`;
-  await sheetsRequest('PUT', token, url, JSON.stringify({ range, values: [[value]] }));
-}
-
-async function appendRows(token, rows) {
-  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.EXPENSES_TAB)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`;
-  await sheetsRequest('POST', token, url, JSON.stringify({ values: rows }));
-}
-
-async function sortSheet(token, sheetId, numRows) {
-  const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}:batchUpdate`;
-  const body = JSON.stringify({
-    requests: [{
-      sortRange: {
-        range: {
-          sheetId,
-          startRowIndex:    3, // skip header rows (rows 1-3)
-          endRowIndex:      numRows,
-          startColumnIndex: 0,
-          endColumnIndex:   NUM_COLS,
-        },
-        sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
-      },
-    }],
-  });
-  await sheetsRequest('POST', token, url, body);
-}
-
-function sheetsGet(token, url) {
-  return new Promise((resolve, reject) => {
-    const p = new URL(url);
-    https.get({ hostname: p.hostname, path: p.pathname + p.search, headers: { Authorization: `Bearer ${token}` } }, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('Parse: ' + d.substring(0,100))); } });
-    }).on('error', reject);
-  });
-}
-
-function sheetsRequest(method, token, url, body) {
-  return new Promise((resolve, reject) => {
-    const p = new URL(url);
-    const req = https.request({
-      hostname: p.hostname, path: p.pathname + p.search, method,
-      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) },
-    }, (res) => {
-      let d = ''; res.on('data', c => d += c);
-      res.on('end', () => {
-        if (res.statusCode >= 400) reject(new Error(`Sheets ${method} ${res.statusCode}: ${d.substring(0,200)}`));
-        else { try { resolve(JSON.parse(d)); } catch { resolve({}); } }
-      });
-    });
-    req.on('error', reject); req.write(body); req.end();
-  });
-}
-
-
-// ================================================================
-// JWT + HELPERS
-// ================================================================
-function buildJWT(privateKey, claims) {
-  const header  = b64u(JSON.stringify({ alg: 'RS256', typ: 'JWT' }));
-  const payload = b64u(JSON.stringify(claims));
-  const signing = `${header}.${payload}`;
-  const sign    = crypto.createSign('RSA-SHA256'); sign.update(signing);
-  return `${signing}.${sign.sign(privateKey, 'base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')}`;
-}
-function b64u(s) { return Buffer.from(s).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
-
-function toDate(iso) {
-  if (!iso) return '';
-  const d = new Date(iso);
-  if (isNaN(d)) return '';
-  return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`;
-}
-function pad(n) { return String(n).padStart(2,'0'); }
-
-function parseDate(str) {
-  const m = String(str||'').match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
-  if (!m) return 0;
-  return new Date(parseInt(m[3]), parseInt(m[2])-1, parseInt(m[1])).getTime();
-}
-
-function httpsPost(hostname, path, body, headers) {
-  return new Promise((resolve, reject) => {
-    const req = https.request({
-      hostname, path, method: 'POST',
-      headers: { 'Content-Length': Buffer.byteLength(body), ...headers },
-    }, (res) => { let d = ''; res.on('data', c => d += c); res.on('end', () => resolve(d)); });
-    req.on('error', reject); req.write(body); req.end();
-  });
-}
