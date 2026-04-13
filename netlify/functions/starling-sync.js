@@ -226,8 +226,8 @@ async function getGoogleToken(sa) {
 
 function mapTx(tx, source) {
   if (tx.direction !== 'OUT') return null;
-  // Filter out internal space transfers (Starling uses SAVINGS_GOAL for space movements)
-  if (tx.counterPartyType === 'SAVINGS_GOAL') return null;
+  // Filter out internal transfers between Starling spaces/categories
+  if (tx.source === 'INTERNAL_TRANSFER') return null;
 
   const date = tx.transactionTime
     ? new Date(tx.transactionTime).toLocaleDateString('en-GB')
