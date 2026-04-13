@@ -5,7 +5,7 @@ const CFG = { SHEET_ID: process.env.GL_SHEET_ID, SA_FETCH_URL: "", SA_FETCH_TOKE
 async function fetchSA() {
   function get(url) { return new Promise((resolve, reject) => { https.get(url, (res) => { if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location).then(resolve).catch(reject); let d = ''; res.on('data', c => d += c); res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA: ' + d.substring(0,100))); } }); }).on('error', reject); }); }
     const { getStore } = require('@netlify/blobs');
-  const store = getStore('service-account');
+  const store = getStore({ name: 'service-account', siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
   const raw = await store.get('sa_json');
   if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
   return JSON.parse(raw);
