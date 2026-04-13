@@ -311,7 +311,7 @@ async function sortExpenses(token) {
       sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
     },
   }]);
-  console.log('sortExpenses: done, status=' + (res && res.status));
+  console.log('sortExpenses: done, status=' + (res && res.status) + ' body=' + JSON.stringify(res && res.data));
 }
 
 // ── Main handler ──────────────────────────────────────────────────
