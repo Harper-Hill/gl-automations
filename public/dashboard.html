@@ -229,10 +229,10 @@ function renderOverview(d){
         <div class="badge up">${gpm}% margin</div>
         <div class="mprev">Jan–${mn} 2025: <strong>${fmtF(d.grossProfit.ytd2025)}</strong> &middot; ${gpm25}% margin</div>
       </div>
-      <div class="metric">
-        <div class="mlabel">Net Profit ${ib('What the business keeps after paying ALL costs')}</div>
-        <div class="mval ${npPos?'pos':'neg'}">${fmtF(d.netProfit.ytd2026)}</div>
-        <div class="badge ${npPos?'up':'dn'}">${npPos?'profit':'loss'}</div>
+      <div class="metric" style="border-color:#2a4a6b;background:#0d1a24">
+        <div class="mlabel" style="color:#6a9abf">Net Profit ${ib('What the business keeps after paying ALL costs')}</div>
+        <div class="mval" style="color:${npPos?'#4a8abf':'var(--red)'}">${fmtF(d.netProfit.ytd2026)}</div>
+        <div class="badge ${npPos?'up':'dn'}" style="${npPos?'background:#0d2a3d;color:#4a8abf':''}">${npPos?'profit':'loss'}</div>
         <div class="mprev">Jan–${mn} 2025: <strong>${fmtF(d.netProfit.ytd2025)}</strong></div>
       </div>
     </div>
@@ -309,7 +309,7 @@ function renderOverview(d){
       {type:'bar',label:'Dom 2026',data:domData,backgroundColor:'#3d6b44',borderRadius:2,stack:'s',order:2},
       {type:'bar',label:'Com 2026',data:comData,backgroundColor:'#1a3d2b',borderRadius:0,stack:'s',order:2},
       {type:'line',label:'2025',data:prev25,borderColor:'#5a7a5e',backgroundColor:'transparent',pointBackgroundColor:'#5a7a5e',pointRadius:3,pointHoverRadius:5,borderWidth:2,tension:0.3,fill:false,order:1},
-      {type:'line',label:'Net P&L (cum)',data:np26m,borderColor:'#4a8abf',backgroundColor:'transparent',pointBackgroundColor:'#4a8abf',pointRadius:2,pointHoverRadius:4,borderWidth:1.5,tension:0.3,fill:false,order:1,borderDash:[4,3]}
+      {type:'line',label:'Net P&L (cum)',data:np26m,borderColor:'#4a8abf',backgroundColor:'transparent',pointBackgroundColor:'#4a8abf',pointRadius:2,pointHoverRadius:4,borderWidth:1.5,tension:0.3,fill:false,order:1,borderDash:[4,3],yAxisID:'y2'}
     ]},
     options:{
       responsive:true,maintainAspectRatio:false,
@@ -334,7 +334,8 @@ function renderOverview(d){
       plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>ctx.dataset.label==='Net P&L (cum)'?' Net P&L (cum): '+(ctx.parsed.y<0?'−':'')+'£'+(Math.abs(ctx.parsed.y)/1000).toFixed(1)+'k':' '+ctx.dataset.label+': £'+(ctx.parsed.y/1000).toFixed(1)+'k'}}},
       scales:{
         x:{stacked:true,ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},autoSkip:false,maxRotation:0},grid:{color:'#1e2420'}},
-        y:{stacked:true,ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},callback:v=>'£'+(v/1000).toFixed(0)+'k'},grid:{color:'#1e2420'}}
+        y:{stacked:true,ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},callback:v=>'£'+(v/1000).toFixed(0)+'k'},grid:{color:'#1e2420'}},
+        y2:{position:'right',ticks:{color:'#4a8abf',font:{size:9,family:'DM Mono'},callback:v=>'£'+(v/1000).toFixed(0)+'k'},grid:{display:false}}
       }
     }
   });
