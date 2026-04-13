@@ -350,6 +350,7 @@ exports.handler = async (event) => {
       );
       for (const tx of txs) {
         if (existingIds.has(tx.feedItemUid)) continue;
+        if (tx.direction === 'OUT') console.log('main tx: source=' + tx.source + ' cpType=' + tx.counterPartyType + ' cpName=' + tx.counterPartyName);
         const row = mapTx(tx, 'Starling');
         if (row) newRows.push(row);
       }
