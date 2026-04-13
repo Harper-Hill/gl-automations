@@ -246,16 +246,17 @@ function mapTx(tx, source) {
   row[2]  = supplier;
   row[3]  = description;
   row[4]  = paymentType;
-  row[5]  = '';          // Overhead? — manual
+  row[5]  = '-';         // Overhead?
   row[6]  = source;
   row[7]  = expCat;      // Expenditure Category
   row[8]  = taxType;     // Tax Type
-  row[9]  = '';          // Cash Movement — manual
+  row[9]  = 'Yes';       // Cash Movement — always Yes for Starling
   row[10] = amount;      // Total
   row[11] = '';          // VAT — manual
   row[12] = '';          // Ex VAT — manual
   row[13] = vatType;     // VAT Type
-  row[18] = tx.status === 'PENDING' ? 'PENDING' : '';  // S - pending flag
+  row[17] = '-';         // R - Notes (default)
+  row[18] = tx.status === 'PENDING' ? 'PENDING' : '-';  // S - pending flag
   row[19] = tx.feedItemUid;
   return row;
 }
