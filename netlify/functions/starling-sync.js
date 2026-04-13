@@ -259,6 +259,7 @@ function mapTx(tx, source) {
   row[11] = '';          // VAT — manual
   row[12] = '';          // Ex VAT — manual
   row[13] = vatType;     // VAT Type
+  row[18] = tx.status === 'PENDING' ? 'PENDING' : '';  // S - pending flag
   row[19] = tx.feedItemUid;
   return row;
 }
@@ -314,6 +315,51 @@ async function sortExpenses(token) {
   console.log('sortExpenses: done, status=' + (res && res.status) + ' body=' + JSON.stringify(res && res.data));
 }
 
+// ── Recheck pending transactions ─────────────────────────────────
+async function recheckPending(token) {
+  // Read all rows from Expenses tab
+  const res = await sheetsGet(token, CFG.EXPENSES_TAB + '!A:T');
+  const rows = res.values || [];
+  const updates = [];
+
+  for (let i = 3; i < rows.length; i++) { // skip header rows (0-based, row 4 = index 3)
+    const row = rows[i];
+    const statusCell = row[18] || ''; // col S
+    const txId = row[19] || '';       // col T
+    if (statusCell !== 'PENDING' || !txId) continue;
+
+    // Re-fetch transaction from Starling by feedItemUid
+    try {
+      const { accounts = [] } = await starling('/api/v2/accounts');
+      for (const { accountUid, defaultCategory } of accounts) {
+        const txRes = await starling(`/api/v2/feed/account/${accountUid}/category/${defaultCategory}/feed-items/${txId}`);
+        if (txRes && txRes.feedItemUid) {
+          if (txRes.status === 'SETTLED') {
+            const newAmount = txRes.amount ? (txRes.amount.minorUnits / 100).toFixed(2) : row[10];
+            updates.push({
+              rowIndex: i + 1, // 1-based sheet row
+              amount: newAmount,
+            });
+            console.log(`recheckPending: ${txId} now SETTLED, amount=${newAmount}`);
+          }
+          break;
+        }
+      }
+    } catch(e) {
+      console.log(`recheckPending: error fetching ${txId}: ${e.message}`);
+    }
+  }
+
+  // Apply updates
+  for (const u of updates) {
+    // Clear PENDING flag in col S, update amount in col K
+    await sheetsPut(token, `${CFG.EXPENSES_TAB}!K${u.rowIndex}`, [[u.amount]]);
+    await sheetsPut(token, `${CFG.EXPENSES_TAB}!S${u.rowIndex}`, [['']]);
+  }
+
+  console.log(`recheckPending: ${updates.length} transactions updated`);
+}
+
 // ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
   console.log('handler: entered, httpMethod=' + event.httpMethod);
@@ -332,6 +378,9 @@ exports.handler = async (event) => {
     const since = (cfgRes.values && cfgRes.values[0] && cfgRes.values[0][0])
       || new Date(new Date().getFullYear(), 0, 1).toISOString();
     console.log('Syncing since:', since);
+
+    // 2b. Recheck any pending transactions from previous syncs
+    await recheckPending(gToken);
 
     // 3. Existing transaction IDs (col T) for dedup
     const idsRes = await sheetsGet(gToken, CFG.EXPENSES_TAB + '!T:T');
