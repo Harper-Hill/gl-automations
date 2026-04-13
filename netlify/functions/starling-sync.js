@@ -228,6 +228,7 @@ function mapTx(tx, source) {
   if (tx.direction !== 'OUT') return null;
   // Filter out internal transfers between Starling spaces/categories
   if (tx.source === 'INTERNAL_TRANSFER') return null;
+  if (tx.status === 'DECLINED') return null;
 
   const date = tx.transactionTime
     ? new Date(tx.transactionTime).toLocaleDateString('en-GB')
