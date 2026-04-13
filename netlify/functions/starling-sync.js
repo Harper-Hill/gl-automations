@@ -40,16 +40,21 @@ const CFG = {
 const SYNC_RULES_TAB = 'Sync Rules';
 
 async function loadRules(token) {
-  const res = await sheetsGet(token, SYNC_RULES_TAB + '!A2:E1000');
+  // Columns: KW1|Field1|KW2|Field2|KW3|Field3|KW4|Field4|ExpCat|TaxType|VATType
+  const res = await sheetsGet(token, SYNC_RULES_TAB + '!A2:K1000');
   const rows = res.values || [];
   return rows
-    .filter(r => r[0] && r[1]) // must have keyword and match field
+    .filter(r => r[0] && r[1]) // must have at least keyword 1 and field 1
     .map(r => ({
-      match:   (r[0] || '').toLowerCase(),
-      field:   (r[1] || '').toLowerCase(),
-      expCat:  r[2] || '',
-      taxType: r[3] || '',
-      vatType: r[4] || '',
+      pairs: [
+        { kw: (r[0]||'').toLowerCase(), field: (r[1]||'').toLowerCase() },
+        { kw: (r[2]||'').toLowerCase(), field: (r[3]||'').toLowerCase() },
+        { kw: (r[4]||'').toLowerCase(), field: (r[5]||'').toLowerCase() },
+        { kw: (r[6]||'').toLowerCase(), field: (r[7]||'').toLowerCase() },
+      ].filter(p => p.kw && p.field),
+      expCat:  r[8]  || '',
+      taxType: r[9]  || '',
+      vatType: r[10] || '',
     }));
 }
 
@@ -57,8 +62,12 @@ function applyRules(rules, supplier, description) {
   const s = (supplier || '').toLowerCase();
   const d = (description || '').toLowerCase();
   for (const rule of rules) {
-    const haystack = rule.field === 'supplier' ? s : d;
-    if (haystack.includes(rule.match)) {
+    // All keyword/field pairs must match (AND logic)
+    const allMatch = rule.pairs.every(p => {
+      const haystack = p.field === 'supplier' ? s : d;
+      return haystack.includes(p.kw);
+    });
+    if (allMatch) {
       return { expCat: rule.expCat, taxType: rule.taxType, vatType: rule.vatType };
     }
   }
