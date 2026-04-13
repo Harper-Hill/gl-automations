@@ -5,6 +5,7 @@
 // New rows get light blue fill (needs manual review)
 // ================================================================
 'use strict';
+console.log('starling-sync: function started');
 
 async function fetchServiceAccount() {
   const { getStore } = require('@netlify/blobs');
