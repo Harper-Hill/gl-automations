@@ -140,6 +140,7 @@ body{display:flex;flex-direction:column}
     <div class="card" id="price-card"></div>
   </div>
   <div class="section" id="sec-goals"><div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+  <div class="section" id="sec-hours"><div id="hours-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
 </div>
 <nav class="bnav">
   <button class="bnav-btn active" id="btn-overview" onclick="switchTab('overview')">
@@ -157,6 +158,10 @@ body{display:flex;flex-direction:column}
   <button class="bnav-btn" id="btn-goals" onclick="switchTab('goals')">
     <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><circle cx="10" cy="10" r="3"/><path d="M10 3v2M10 15v2M3 10h2M15 10h2"/></svg>
     Goals
+  </button>
+  <button class="bnav-btn" id="btn-hours" onclick="switchTab('hours')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/><path d="M3 4l3 3M17 4l-3 3"/></svg>
+    Hours
   </button>
 </nav>
 <script>
@@ -251,6 +256,7 @@ function renderOverview(d){
         <div class="split-item"><div class="split-label">Commercial</div><div class="split-val">${fmt(d.commercial.ytd)}</div><div class="split-sub">${comP}% of total</div></div>
       </div>
     </div>
+    <div class="card" id="hours-card-placeholder"></div>
     <div class="sync-grid">
       <div class="sync-card" onclick="toggleCard('inv-detail')">
         <div class="sync-tag">Last Invoice</div>
@@ -366,6 +372,102 @@ function renderExpenses(d){
   }
 }
 
+function renderHours(d){
+  if(!d.hours){
+    document.getElementById('hours-content').innerHTML='<div class="loading" style="color:var(--faint)">No hours data yet</div>';
+    return;
+  }
+  const h=d.hours;
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+
+  function pctFmt(v){return typeof v==='number'?(v*100).toFixed(1)+'%':'—';}
+  function hoursCard(label, data, color){
+    const avg=data.billablePct.average;
+    const goal=data.billablePct.goal;
+    const avgPct=typeof avg==='number'?avg*100:0;
+    const goalPct=typeof goal==='number'?goal*100:0;
+    const onTarget=avgPct>=goalPct;
+    const prog=Math.min(Math.round((avgPct/Math.max(goalPct,1))*100),100);
+    const monthlyData=data.billablePct.monthly.map(m=>typeof m.value==='number'?+(m.value*100).toFixed(1):0);
+    const canvasId='hchart-'+label.replace(/\s/g,'-');
+    return `<div class="card" style="margin-bottom:12px">
+      <div class="slabel">${label} — Billable Hours %</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:700;color:${onTarget?'var(--green-lt)':'var(--red)'};line-height:1">${avgPct.toFixed(1)}%</div>
+          <div style="font-size:10px;color:var(--dim);margin-top:4px">YTD average</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:11px;color:var(--faint)">Goal</div>
+          <div style="font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--faint)">${goalPct.toFixed(0)}%</div>
+        </div>
+      </div>
+      <div style="background:#1e2420;border-radius:3px;height:6px;margin-bottom:6px;position:relative">
+        <div style="background:${onTarget?'var(--green)':'var(--red)'};height:6px;border-radius:3px;width:${Math.min(avgPct,goalPct>0?goalPct:100)/Math.max(goalPct,100)*100}%;max-width:100%;transition:width .6s"></div>
+        ${goalPct>0?`<div style="position:absolute;top:-3px;left:${Math.min(goalPct,100)}%;width:2px;height:12px;background:var(--faint);border-radius:1px;transform:translateX(-50%)"></div>`:''}
+      </div>
+      <div style="font-size:10px;color:${onTarget?'var(--green-lt)':'var(--red)'};margin-bottom:12px">
+        ${onTarget?'↑ On target':'↓ Below target'} &middot; ${Math.abs(avgPct-goalPct).toFixed(1)}% ${onTarget?'above':'below'} goal
+      </div>
+      <div class="chart-wrap" style="height:140px"><canvas id="${canvasId}"></canvas></div>
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:12px">
+        <div style="font-size:10px"><div style="color:var(--faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">Clocked</div><div style="color:var(--text)">${typeof data.totalClocked.total==='number'?data.totalClocked.total.toFixed(1)+'h':'—'}</div></div>
+        <div style="font-size:10px"><div style="color:var(--faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">Billable</div><div style="color:var(--green-lt)">${typeof data.totalBillable.total==='number'?data.totalBillable.total.toFixed(1)+'h':'—'}</div></div>
+        <div style="font-size:10px"><div style="color:var(--faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase;margin-bottom:3px">Admin</div><div style="color:var(--dim)">${typeof data.adminHours.total==='number'?data.adminHours.total.toFixed(1)+'h':'—'}</div></div>
+      </div>
+      <script>
+      (function(){
+        var ctx=document.getElementById('${canvasId}');
+        if(!ctx)return;
+        new Chart(ctx,{
+          type:'bar',
+          data:{labels:${JSON.stringify(months)},datasets:[
+            {data:${JSON.stringify(monthlyData)},backgroundColor:monthlyData.map(v=>v>=${goalPct}?'${color}':'#c05c4a'),borderRadius:2}
+          ]},
+          options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.y.toFixed(1)+'%'}}},
+            scales:{
+              x:{ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},maxRotation:0},grid:{color:'#1e2420'}},
+              y:{ticks:{color:'#4a5e50',font:{size:9,family:'DM Mono'},callback:v=>v+'%'},grid:{color:'#1e2420'},
+                suggestedMax:Math.max(${goalPct+10},Math.max(...${JSON.stringify(monthlyData)})+5)}
+            }
+          }
+        });
+      })();
+      <\/script>
+    </div>`;
+  }
+
+  document.getElementById('hours-content').innerHTML=`
+    <div class="slabel">Operational Hours — 2026</div>
+    ${hoursCard('Staff Hours', h.staff, '#3d6b44')}
+    ${hoursCard('Director Hours', h.director, '#1a3d2b')}
+    ${hoursCard('All Hours', h.all, '#2a5c38')}
+  `;
+
+  // Also update the overview hours card
+  const hCard=document.getElementById('hours-card-placeholder');
+  if(hCard&&h.staff){
+    const avg=h.staff.billablePct.average;
+    const goal=h.staff.billablePct.goal;
+    const avgPct=typeof avg==='number'?avg*100:0;
+    const goalPct=typeof goal==='number'?goal*100:0;
+    const onTarget=avgPct>=goalPct;
+    hCard.innerHTML=`
+      <div class="slabel">Staff Billable Hours % ${ib('Percentage of staff hours logged against billable client jobs (target: '+goalPct.toFixed(0)+'%)')}</div>
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:8px">
+        <div><div class="mval ${onTarget?'pos':'neg'}">${avgPct.toFixed(1)}%</div><div style="font-size:10px;color:var(--dim);margin-top:4px">YTD average</div></div>
+        <div style="text-align:right"><div style="font-size:10px;color:var(--faint)">Goal</div><div style="font-family:'Syne',sans-serif;font-size:20px;font-weight:700;color:var(--faint)">${goalPct.toFixed(0)}%</div></div>
+      </div>
+      <div style="background:#1e2420;border-radius:3px;height:5px;margin-bottom:6px;position:relative">
+        <div style="background:${onTarget?'var(--green)':'var(--red)'};height:5px;border-radius:3px;width:${Math.min((avgPct/Math.max(goalPct,1))*100,100)}%;transition:width .6s"></div>
+        <div style="position:absolute;top:-3px;left:${Math.min(goalPct,100)}%;width:2px;height:11px;background:var(--faint);border-radius:1px;transform:translateX(-50%)"></div>
+      </div>
+      <div style="font-size:10px;color:${onTarget?'var(--green-lt)':'var(--red)'}">
+        ${onTarget?'↑ On target':'↓ Below target'} &middot; ${Math.abs(avgPct-goalPct).toFixed(1)}% ${onTarget?'above':'below'} ${goalPct.toFixed(0)}% goal
+      </div>`;
+  }
+}
+
 function renderGoals(d){
   const now=new Date();
   const dayOfYear=Math.floor((now-new Date(now.getFullYear(),0,0))/(1000*60*60*24));
@@ -437,7 +539,7 @@ async function loadData(silent){
     const res=await fetch('/.netlify/functions/dashboard-data');
     const d=await res.json();
     if(d.error)throw new Error(d.error);
-    renderOverview(d);renderExpenses(d);renderGoals(d);
+    renderOverview(d);renderExpenses(d);renderGoals(d);renderHours(d);
     document.getElementById('hdr-time').textContent=new Date(d.updatedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('live-dot').style.background='#5a9e68';
   }catch(e){
