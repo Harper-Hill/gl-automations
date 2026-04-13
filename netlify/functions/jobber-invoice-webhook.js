@@ -20,7 +20,7 @@ async function fetchServiceAccount() {
       }).on('error', reject);
     });
   }
-  return get(process.env.SA_FETCH_URL + '?token=' + process.env.SA_FETCH_TOKEN);
+  return JSON.parse(Buffer.from((process.env.GOOGLE_SA_B64_1||"")+(process.env.GOOGLE_SA_B64_2||""),"base64").toString("utf8"));
 }
 
 const CFG = {

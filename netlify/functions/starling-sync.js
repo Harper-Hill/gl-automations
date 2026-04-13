@@ -283,7 +283,7 @@ exports.handler = async (event) => {
 
   try {
     // 1. Auth
-    const saRaw = Buffer.from(process.env.GOOGLE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8');
+    const saRaw = Buffer.from((process.env.GOOGLE_SA_B64_1 || '') + (process.env.GOOGLE_SA_B64_2 || ''), 'base64').toString('utf8');
     const sa = JSON.parse(saRaw);
     const gToken = await getGoogleToken(sa);
 

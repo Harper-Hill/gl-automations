@@ -10,8 +10,8 @@ const CFG = {
   SHEET_ID:       process.env.GL_SHEET_ID,
   SHEET_TAB:      process.env.GL_SHEET_TAB || 'Income',
   SHEET_GID:      process.env.GL_SHEET_GID,
-  SA_FETCH_URL:   process.env.SA_FETCH_URL,
-  SA_FETCH_TOKEN: process.env.SA_FETCH_TOKEN,
+  SA_FETCH_URL:   "",
+  SA_FETCH_TOKEN: "",
   FRS_RATE:       0.12,
 };
 
@@ -25,7 +25,7 @@ async function fetchServiceAccount() {
       }).on('error', reject);
     });
   }
-  return get(CFG.SA_FETCH_URL + '?token=' + CFG.SA_FETCH_TOKEN);
+  return JSON.parse(Buffer.from((process.env.GOOGLE_SA_B64_1||""+(process.env.GOOGLE_SA_B64_2||"")),"base64").toString("utf8"));
 }
 
 function req(options, body) {
