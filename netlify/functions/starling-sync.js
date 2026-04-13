@@ -12,7 +12,11 @@ async function fetchServiceAccount() {
     console.log('fetchServiceAccount: starting');
     const { getStore } = require('@netlify/blobs');
     console.log('fetchServiceAccount: got getStore');
-    const store = getStore('service-account');
+    const store = getStore({
+      name: 'service-account',
+      siteID: process.env.NETLIFY_SITE_ID,
+      token: process.env.NETLIFY_ACCESS_TOKEN,
+    });
     console.log('fetchServiceAccount: got store');
     const raw = await store.get('sa_json');
     console.log('fetchServiceAccount: raw type=' + typeof raw + ' length=' + (raw ? raw.length : 'null'));
