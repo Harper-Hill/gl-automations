@@ -226,6 +226,8 @@ async function getGoogleToken(sa) {
 
 function mapTx(tx, source) {
   if (tx.direction !== 'OUT') return null;
+  // Filter out internal space transfers (Starling uses SAVINGS_GOAL for space movements)
+  if (tx.counterPartyType === 'SAVINGS_GOAL') return null;
 
   const date = tx.transactionTime
     ? new Date(tx.transactionTime).toLocaleDateString('en-GB')
@@ -287,11 +289,13 @@ async function formatNewRows(token, startRow, count) {
 }
 
 // ── Sort Expenses tab by Posted Date (col A) ──────────────────────
-async function sortExpenses(token) {
+async function sortExpenses(token, rowCount) {
   if (!CFG.EXPENSES_GID) return;
+  // endRowIndex must be set — use rowCount + generous buffer
+  const endRowIndex = rowCount ? rowCount + 10 : 5000;
   await sheetsBatchUpdate(token, [{
     sortRange: {
-      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 1, startColumnIndex: 0, endColumnIndex: 20 },
+      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 1, endRowIndex: endRowIndex, startColumnIndex: 0, endColumnIndex: 20 },
       sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
     },
   }]);
@@ -371,7 +375,7 @@ exports.handler = async (event) => {
         await formatNewRows(gToken, firstNewRow, newRows.length);
       }
 
-      await sortExpenses(gToken);
+      await sortExpenses(gToken, existingIds.size + newRows.length);
     }
 
     // 6. Update last sync time
