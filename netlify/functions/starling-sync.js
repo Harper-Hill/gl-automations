@@ -129,7 +129,7 @@ function httpsReq(options, body) {
       });
     });
     r.on('error', reject);
-    if (body) r.write(JSON.stringify(body));
+    if (body) r.write(typeof body === "string" ? body : JSON.stringify(body));
     r.end();
   });
 }
