@@ -6,6 +6,14 @@
 // ================================================================
 'use strict';
 
+async function fetchServiceAccount() {
+  const { getStore } = require('@netlify/blobs');
+  const store = getStore('service-account');
+  const raw = await store.get('sa_json');
+  if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
+  return JSON.parse(raw);
+}
+
 const https = require('https');
 
 const CFG = {
@@ -283,8 +291,7 @@ exports.handler = async (event) => {
 
   try {
     // 1. Auth
-    const saRaw = Buffer.from((process.env.GOOGLE_SA_B64_1 || '') + (process.env.GOOGLE_SA_B64_2 || ''), 'base64').toString('utf8');
-    const sa = JSON.parse(saRaw);
+    const sa = await fetchServiceAccount();
     const gToken = await getGoogleToken(sa);
 
     // 2. Last sync time from Config!B2

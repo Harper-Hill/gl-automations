@@ -25,7 +25,11 @@ async function fetchServiceAccount() {
       }).on('error', reject);
     });
   }
-  return JSON.parse(Buffer.from((process.env.GOOGLE_SA_B64_1||""+(process.env.GOOGLE_SA_B64_2||"")),"base64").toString("utf8"));
+    const { getStore } = require('@netlify/blobs');
+  const store = getStore('service-account');
+  const raw = await store.get('sa_json');
+  if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
+  return JSON.parse(raw);
 }
 
 function req(options, body) {

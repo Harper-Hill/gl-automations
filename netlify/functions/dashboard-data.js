@@ -4,7 +4,11 @@ const { createSign } = require('crypto');
 const CFG = { SHEET_ID: process.env.GL_SHEET_ID, SA_FETCH_URL: "", SA_FETCH_TOKEN: "" };
 async function fetchSA() {
   function get(url) { return new Promise((resolve, reject) => { https.get(url, (res) => { if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) return get(res.headers.location).then(resolve).catch(reject); let d = ''; res.on('data', c => d += c); res.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { reject(new Error('SA: ' + d.substring(0,100))); } }); }).on('error', reject); }); }
-  return JSON.parse(Buffer.from((process.env.GOOGLE_SA_B64_1||""+(process.env.GOOGLE_SA_B64_2||"")),"base64").toString("utf8"));
+    const { getStore } = require('@netlify/blobs');
+  const store = getStore('service-account');
+  const raw = await store.get('sa_json');
+  if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
+  return JSON.parse(raw);
 }
 function req(o, b) { return new Promise((resolve, reject) => { const r = https.request(o, rr => { let d = ''; rr.on('data', c => d += c); rr.on('end', () => { try { resolve(JSON.parse(d)); } catch(e) { resolve(d); } }); }); r.on('error', reject); if (b) r.write(typeof b === 'string' ? b : JSON.stringify(b)); r.end(); }); }
 function b64u(s) { return Buffer.from(s).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
