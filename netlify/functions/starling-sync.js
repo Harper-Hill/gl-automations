@@ -295,7 +295,7 @@ async function sortExpenses(token, rowCount) {
   const endRowIndex = rowCount ? rowCount + 10 : 5000;
   await sheetsBatchUpdate(token, [{
     sortRange: {
-      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 1, endRowIndex: endRowIndex, startColumnIndex: 0, endColumnIndex: 20 },
+      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 3, endRowIndex: 10000, startColumnIndex: 0, endColumnIndex: 20 },
       sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
     },
   }]);
