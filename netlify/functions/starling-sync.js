@@ -289,16 +289,16 @@ async function formatNewRows(token, startRow, count) {
 }
 
 // ── Sort Expenses tab by Posted Date (col A) ──────────────────────
-async function sortExpenses(token, rowCount) {
-  if (!CFG.EXPENSES_GID) return;
-  // endRowIndex must be set — use rowCount + generous buffer
-  const endRowIndex = rowCount ? rowCount + 10 : 5000;
-  await sheetsBatchUpdate(token, [{
+async function sortExpenses(token) {
+  if (!CFG.EXPENSES_GID) { console.log('sortExpenses: no GID, skipping'); return; }
+  console.log('sortExpenses: starting, sheetId=' + CFG.EXPENSES_GID);
+  const res = await sheetsBatchUpdate(token, [{
     sortRange: {
       range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 3, endRowIndex: 10000, startColumnIndex: 0, endColumnIndex: 20 },
       sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
     },
   }]);
+  console.log('sortExpenses: done, status=' + (res && res.status));
 }
 
 // ── Main handler ──────────────────────────────────────────────────
@@ -376,7 +376,7 @@ exports.handler = async (event) => {
         await formatNewRows(gToken, firstNewRow, newRows.length);
       }
 
-      await sortExpenses(gToken, existingIds.size + newRows.length);
+      await sortExpenses(gToken);
     }
 
     // 6. Update last sync time
