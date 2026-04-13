@@ -295,11 +295,13 @@ async function sortExpenses(token) {
 
 // ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
+  console.log('handler: entered, httpMethod=' + event.httpMethod);
   if (event.httpMethod && event.httpMethod !== 'GET') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
+    console.log('handler: calling fetchServiceAccount');
     // 1. Auth
     const sa = await fetchServiceAccount();
     const gToken = await getGoogleToken(sa);
