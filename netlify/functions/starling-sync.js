@@ -206,8 +206,7 @@ function mapTx(tx, source, rules) {
   if (vatType === 'No VAT') {
     vat = '0.00';
     exVat = amount;
-  } else if (vatType === '') {
-    // Standard 20%
+  } else if (vatType === 'Standard') {
     vat = (amt / 6).toFixed(2);
     exVat = (amt / 1.2).toFixed(2);
   } else if (vatType === 'Reduced VAT') {
