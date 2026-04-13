@@ -7,7 +7,7 @@
   included_files = ["netlify/functions/**"]
 
 [functions.starling-sync]
-  schedule = "0 6 * * *"
+  schedule = "0 6,13,22 * * *"
 
 [functions.stripe-sync]
   schedule = "0 6 * * *"
