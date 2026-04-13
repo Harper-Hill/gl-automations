@@ -349,6 +349,7 @@ exports.handler = async (event) => {
         );
         for (const tx of stxs) {
           if (existingIds.has(tx.feedItemUid)) continue;
+          if (newRows.length < 3) console.log("space tx: source=" + tx.source + " cpType=" + tx.counterPartyType + " cpName=" + tx.counterPartyName + " dir=" + tx.direction);
           const row = mapTx(tx, `Starling (${sp.name})`);
           if (row) newRows.push(row);
         }
