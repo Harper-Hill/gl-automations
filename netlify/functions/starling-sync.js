@@ -8,11 +8,20 @@
 console.log('starling-sync: function started');
 
 async function fetchServiceAccount() {
-  const { getStore } = require('@netlify/blobs');
-  const store = getStore('service-account');
-  const raw = await store.get('sa_json');
-  if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
-  return JSON.parse(raw);
+  try {
+    console.log('fetchServiceAccount: starting');
+    const { getStore } = require('@netlify/blobs');
+    console.log('fetchServiceAccount: got getStore');
+    const store = getStore('service-account');
+    console.log('fetchServiceAccount: got store');
+    const raw = await store.get('sa_json');
+    console.log('fetchServiceAccount: raw type=' + typeof raw + ' length=' + (raw ? raw.length : 'null'));
+    if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
+    return JSON.parse(raw);
+  } catch(e) {
+    console.error('fetchServiceAccount failed:', e.message);
+    throw e;
+  }
 }
 
 const https = require('https');
