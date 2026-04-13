@@ -200,8 +200,22 @@ function mapTx(tx, source, rules) {
   row[8]  = taxType;     // Tax Type
   row[9]  = 'Yes';       // Cash Movement — always Yes for Starling
   row[10] = amount;      // Total
-  row[11] = '';          // VAT — manual
-  row[12] = '';          // Ex VAT — manual
+  // VAT calculations based on VAT Type
+  const amt = parseFloat(amount);
+  let vat = '', exVat = '';
+  if (vatType === 'No VAT') {
+    vat = '0.00';
+    exVat = amount;
+  } else if (vatType === '') {
+    // Standard 20%
+    vat = (amt / 6).toFixed(2);
+    exVat = (amt / 1.2).toFixed(2);
+  } else if (vatType === 'Reduced VAT') {
+    vat = (amt * 5 / 105).toFixed(2);
+    exVat = (amt / 1.05).toFixed(2);
+  }
+  row[11] = vat;         // VAT
+  row[12] = exVat;       // Ex VAT
   row[13] = vatType;     // VAT Type
   row[17] = '-';         // R - Notes (default)
   row[18] = tx.status === 'PENDING' ? 'PENDING' : '-';  // S - pending flag
