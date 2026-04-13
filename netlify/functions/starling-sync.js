@@ -5,21 +5,16 @@
 // New rows get light blue fill (needs manual review)
 // ================================================================
 'use strict';
-console.log('starling-sync: function started');
 
 async function fetchServiceAccount() {
   try {
-    console.log('fetchServiceAccount: starting');
     const { getStore } = require('@netlify/blobs');
-    console.log('fetchServiceAccount: got getStore');
     const store = getStore({
       name: 'service-account',
       siteID: process.env.NETLIFY_SITE_ID,
       token: process.env.NETLIFY_ACCESS_TOKEN,
     });
-    console.log('fetchServiceAccount: got store');
     const raw = await store.get('sa_json');
-    console.log('fetchServiceAccount: raw type=' + typeof raw + ' length=' + (raw ? raw.length : 'null'));
     if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
     return JSON.parse(raw);
   } catch(e) {
@@ -363,14 +358,12 @@ async function recheckPending(token) {
 
 // ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
-  console.log('handler: entered, httpMethod=' + event.httpMethod);
   if (event.httpMethod && event.httpMethod !== 'GET') {
     return { statusCode: 405, body: 'Method Not Allowed' };
   }
 
   try {
-    console.log('handler: calling fetchServiceAccount');
-    // 1. Auth
+      // 1. Auth
     const sa = await fetchServiceAccount();
     const gToken = await getGoogleToken(sa);
 
@@ -400,7 +393,6 @@ exports.handler = async (event) => {
       );
       for (const tx of txs) {
         if (existingIds.has(tx.feedItemUid)) continue;
-        if (tx.direction === 'OUT') console.log('main tx: source=' + tx.source + ' cpType=' + tx.counterPartyType + ' cpName=' + tx.counterPartyName + ' status=' + tx.status + ' settled=' + tx.settlementTime);
         const row = mapTx(tx, 'Starling');
         if (row) newRows.push(row);
       }
