@@ -304,7 +304,7 @@ async function getSheetRowCount(token) {
 async function sortExpenses(token) {
   if (!CFG.EXPENSES_GID) { console.log('sortExpenses: no GID, skipping'); return; }
   const rowCount = await getSheetRowCount(token);
-  console.log('sortExpenses: starting, sheetId=' + CFG.EXPENSES_GID + ' rowCount=' + rowCount);
+  console.log('sortExpenses: starting, sheetId=' + CFG.EXPENSES_GID + ' type=' + typeof CFG.EXPENSES_GID + ' rowCount=' + rowCount);
   const res = await sheetsBatchUpdate(token, [{
     sortRange: {
       range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 3, endRowIndex: rowCount, startColumnIndex: 0, endColumnIndex: 20 },
