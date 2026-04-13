@@ -26,7 +26,7 @@ exports.handler = async () => {
   try {
     const sa = await fetchSA();
     const token = await gToken(sa);
-    const range = encodeURIComponent('Config!B5');
+    const range = encodeURIComponent('Config!B7');
     const res = await req({ hostname:'sheets.googleapis.com', path:'/v4/spreadsheets/'+CFG.SHEET_ID+'/values/'+range, method:'GET', headers:{Authorization:'Bearer '+token} });
     const raw = res.values && res.values[0] && res.values[0][0];
     if (!raw) throw new Error('No data in Config B5');
