@@ -289,12 +289,25 @@ async function formatNewRows(token, startRow, count) {
 }
 
 // ── Sort Expenses tab by Posted Date (col A) ──────────────────────
+async function getSheetRowCount(token) {
+  const res = await httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${CFG.SHEET_ID}?fields=sheets.properties`,
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  const sheets = res.data.sheets || [];
+  const sheet = sheets.find(s => s.properties.sheetId === CFG.EXPENSES_GID);
+  return sheet ? sheet.properties.gridProperties.rowCount : 10000;
+}
+
 async function sortExpenses(token) {
   if (!CFG.EXPENSES_GID) { console.log('sortExpenses: no GID, skipping'); return; }
-  console.log('sortExpenses: starting, sheetId=' + CFG.EXPENSES_GID);
+  const rowCount = await getSheetRowCount(token);
+  console.log('sortExpenses: starting, sheetId=' + CFG.EXPENSES_GID + ' rowCount=' + rowCount);
   const res = await sheetsBatchUpdate(token, [{
     sortRange: {
-      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 3, endRowIndex: 10000, startColumnIndex: 0, endColumnIndex: 20 },
+      range: { sheetId: CFG.EXPENSES_GID, startRowIndex: 3, endRowIndex: rowCount, startColumnIndex: 0, endColumnIndex: 20 },
       sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }],
     },
   }]);
