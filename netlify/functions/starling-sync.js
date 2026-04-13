@@ -32,94 +32,33 @@ const CFG = {
   EXPENSES_GID:   parseInt(process.env.GL_EXPENSES_GID, 10),
 };
 
-// ── Classification rules ──────────────────────────────────────────
+// ── Classification rules (loaded from Sync Rules sheet tab) ──────
+// Rules tab columns: A=Keyword, B=Match Field, C=Expenditure Category,
+//                    D=Tax Type, E=VAT Type
 // Applied top-to-bottom, first match wins.
-// field: 'supplier' or 'description' (case-insensitive partial match)
-// expCat: Expenditure Category (col H)
-// taxType: Tax Type (col I) — 'Expense', 'CAPITAL', 'Disallowable', 'Money Transfer'
-// vatType: VAT Type (col N) — 'No VAT', 'Reduced VAT', or '' (standard)
 
-const RULES = [
-  // ── Wages / Salaries ─────────────────────────────────────────
-  { field: 'supplier', match: 'sam barton',          expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'laure jean',          expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'alex honnor',         expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'nadia beele',         expCat: 'Direct Labour Costs (Salaries)',    taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'peter barus',         expCat: 'Directors Wages',                   taxType: 'Expense',        vatType: 'No VAT' },
+const SYNC_RULES_TAB = 'Sync Rules';
 
-  // ── HMRC / Tax ────────────────────────────────────────────────
-  { field: 'supplier', match: 'hmrc',                expCat: 'Money Transfer',                    taxType: 'Money Transfer',  vatType: 'No VAT' },
-  { field: 'supplier', match: 'dvla',                expCat: 'Vehicles (Operating) Fixed Costs',  taxType: 'Expense',        vatType: 'No VAT' },
+async function loadRules(token) {
+  const res = await sheetsGet(token, SYNC_RULES_TAB + '!A2:E1000');
+  const rows = res.values || [];
+  return rows
+    .filter(r => r[0] && r[1]) // must have keyword and match field
+    .map(r => ({
+      match:   (r[0] || '').toLowerCase(),
+      field:   (r[1] || '').toLowerCase(),
+      expCat:  r[2] || '',
+      taxType: r[3] || '',
+      vatType: r[4] || '',
+    }));
+}
 
-  // ── Vehicles ──────────────────────────────────────────────────
-  { field: 'supplier', match: 'fuel card',           expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: '' },
-  { field: 'supplier', match: 'nadia beele van',     expCat: 'Vehicles (None Van Costs)',          taxType: 'Expense',        vatType: '' },
-  { field: 'description', match: 'fuel',             expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: '' },
-  { field: 'description', match: 'mileage',          expCat: 'Vehicles (Operating) Variable Costs', taxType: 'Expense',     vatType: 'No VAT' },
-
-  // ── Van finance / loan ────────────────────────────────────────
-  { field: 'supplier', match: 'van finance',         expCat: 'Loan Interest (Van)',               taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'description', match: 'van finance',      expCat: 'Loan Interest (Van)',               taxType: 'Expense',        vatType: 'No VAT' },
-
-  // ── Capital One (credit card repayments) ─────────────────────
-  { field: 'supplier', match: 'capital one',         expCat: 'Money Transfer',                    taxType: 'Money Transfer',  vatType: 'No VAT' },
-
-  // ── Software / IT ─────────────────────────────────────────────
-  { field: 'supplier', match: 'wix',                 expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'quickbooks',          expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'intuit',              expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: '123 reg',             expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'amazon prime',        expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'pdftoexcel',          expCat: 'Software (Operating)',              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'sky mobile',          expCat: 'IT Expenses (Operating)',           taxType: 'Expense',        vatType: '' },
-  { field: 'description', match: 'card subscription', expCat: 'Software (Operating)',             taxType: 'Expense',        vatType: '' },
-
-  // ── Insurance ─────────────────────────────────────────────────
-  { field: 'description', match: 'insurance',        expCat: 'Insurance',                         taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'insurance',           expCat: 'Insurance',                         taxType: 'Expense',        vatType: 'No VAT' },
-
-  // ── Tools / Equipment / Supplies ──────────────────────────────
-  { field: 'supplier', match: 'screwfix',            expCat: 'Other (Operating) (Small Tools)',   taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'diamond',             expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'ironmonger',          expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'newhow',              expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'fleetsmart',          expCat: 'Vehicles (Operating) Fixed Costs',  taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'paintnuts',           expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-
-  // ── Amazon (general supplies = COGS) ─────────────────────────
-  { field: 'supplier', match: 'amazon',              expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'ebay',                expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-
-  // ── Property / Rent ───────────────────────────────────────────
-  { field: 'supplier', match: 'rent',                expCat: 'Rent',                              taxType: 'Expense',        vatType: 'No VAT' },
-  { field: 'supplier', match: 'hm land reg',         expCat: 'Other Property Costs',              taxType: 'Expense',        vatType: '' },
-
-  // ── Marketing ─────────────────────────────────────────────────
-  { field: 'supplier', match: 'wix.com',             expCat: 'Marketing & Advertising',           taxType: 'Expense',        vatType: '' },
-
-  // ── Subcontractors / Melvyn Carr ─────────────────────────────
-  { field: 'supplier', match: 'melvyn carr',         expCat: 'Subcontractor Payments (CIS)',      taxType: 'Expense',        vatType: 'No VAT' },
-
-  // ── Shopify / Shopscpb ────────────────────────────────────────
-  { field: 'supplier', match: 'shopscpb',            expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-  { field: 'supplier', match: 'sp shops',            expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-
-  // ── Doorfittings ─────────────────────────────────────────────
-  { field: 'supplier', match: 'doorfittings',        expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-
-  // ── Sheffield County Council ──────────────────────────────────
-  { field: 'supplier', match: 'sheffield',           expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-
-  // ── Sumup / Gecic ─────────────────────────────────────────────
-  { field: 'supplier', match: 'sumup',               expCat: 'COGS',                              taxType: 'Expense',        vatType: '' },
-];
-
-function applyRules(supplier, description) {
+function applyRules(rules, supplier, description) {
   const s = (supplier || '').toLowerCase();
   const d = (description || '').toLowerCase();
-  for (const rule of RULES) {
+  for (const rule of rules) {
     const haystack = rule.field === 'supplier' ? s : d;
-    if (haystack.includes(rule.match.toLowerCase())) {
+    if (haystack.includes(rule.match)) {
       return { expCat: rule.expCat, taxType: rule.taxType, vatType: rule.vatType };
     }
   }
@@ -219,7 +158,7 @@ async function getGoogleToken(sa) {
 // 12 Ex VAT       | 13 VAT Type    | 14–18 (formula cols, leave blank)
 // 19 Transaction ID (dedup)
 
-function mapTx(tx, source) {
+function mapTx(tx, source, rules) {
   if (tx.direction !== 'OUT') return null;
   // Filter out internal transfers between Starling spaces/categories
   if (tx.source === 'INTERNAL_TRANSFER') return null;
@@ -238,7 +177,7 @@ function mapTx(tx, source) {
   else if (tx.source === 'STANDING_ORDER')  paymentType = 'Standing Order';
   else if (tx.source === 'ONLINE_PAYMENT')  paymentType = 'Online Payment';
 
-  const { expCat, taxType, vatType } = applyRules(supplier, description);
+  const { expCat, taxType, vatType } = applyRules(rules, supplier, description);
 
   const row = new Array(20).fill('');
   row[0]  = date;
@@ -374,7 +313,11 @@ exports.handler = async (event) => {
       || new Date(new Date().getFullYear(), 0, 1).toISOString();
     console.log('Syncing since:', since);
 
-    // 2b. Recheck any pending transactions from previous syncs
+    // 2b. Load classification rules from sheet
+    const rules = await loadRules(gToken);
+    console.log(`Loaded ${rules.length} classification rules`);
+
+    // 2c. Recheck any pending transactions from previous syncs
     await recheckPending(gToken);
 
     // 3. Existing transaction IDs (col T) for dedup
@@ -394,7 +337,7 @@ exports.handler = async (event) => {
       );
       for (const tx of txs) {
         if (existingIds.has(tx.feedItemUid)) continue;
-        const row = mapTx(tx, 'Starling');
+        const row = mapTx(tx, 'Starling', rules);
         if (row) newRows.push(row);
       }
 
@@ -407,7 +350,7 @@ exports.handler = async (event) => {
         for (const tx of stxs) {
           if (existingIds.has(tx.feedItemUid)) continue;
           if (newRows.length < 3) console.log("space tx: source=" + tx.source + " cpType=" + tx.counterPartyType + " cpName=" + tx.counterPartyName + " dir=" + tx.direction);
-          const row = mapTx(tx, `Starling (${sp.name})`);
+          const row = mapTx(tx, `Starling (${sp.name})`, rules);
           if (row) newRows.push(row);
         }
       }
