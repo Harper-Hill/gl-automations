@@ -28,7 +28,7 @@ async function fetchServiceAccount() {
     });
   }
     const { getStore } = require('@netlify/blobs');
-  const store = getStore('service-account');
+  const store = getStore({ name: 'service-account', siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
   const raw = await store.get('sa_json');
   if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
   return JSON.parse(raw);
