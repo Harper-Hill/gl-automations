@@ -604,16 +604,16 @@ setInterval(()=>loadData(true),3600000);
 // ── NETLIFY IDENTITY ───────────────────────────────────────────
 let _user=null, _showAllNotifs=false, _notifsCache=null;
 function isDirector(u){return u && u.app_metadata && (u.app_metadata.roles||[]).indexOf('director')!==-1;}
-async function freshToken(){
-  if(!_user)return null;
+async function authHeaders(){
+  if(!_user)return {};
   try{
-    // refresh() returns the access token string and updates _user.token
-    return await window.netlifyIdentity.refresh();
+    const t=await _user.jwt();
+    return t?{'Authorization':'Bearer '+t}:{};
   }catch(e){
-    return _user.token && _user.token.access_token;
+    console.error('jwt error', e);
+    return {};
   }
 }
-async function authHeaders(){const t=await freshToken();return t?{'Authorization':'Bearer '+t}:{};}
 function updateAuthUI(){
   const btn=document.getElementById('auth-btn');
   if(_user){btn.textContent=_user.user_metadata&&_user.user_metadata.full_name?_user.user_metadata.full_name.split(' ')[0]:'Sign out';btn.classList.remove('signed-out');}
