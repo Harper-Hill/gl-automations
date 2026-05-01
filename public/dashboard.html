@@ -604,8 +604,16 @@ setInterval(()=>loadData(true),3600000);
 // ── NETLIFY IDENTITY ───────────────────────────────────────────
 let _user=null, _showAllNotifs=false, _notifsCache=null;
 function isDirector(u){return u && u.app_metadata && (u.app_metadata.roles||[]).indexOf('director')!==-1;}
-function authToken(){return _user && _user.token && _user.token.access_token;}
-function authHeaders(){const t=authToken();return t?{'Authorization':'Bearer '+t}:{};}
+async function freshToken(){
+  if(!_user)return null;
+  try{
+    // refresh() returns the access token string and updates _user.token
+    return await window.netlifyIdentity.refresh();
+  }catch(e){
+    return _user.token && _user.token.access_token;
+  }
+}
+async function authHeaders(){const t=await freshToken();return t?{'Authorization':'Bearer '+t}:{};}
 function updateAuthUI(){
   const btn=document.getElementById('auth-btn');
   if(_user){btn.textContent=_user.user_metadata&&_user.user_metadata.full_name?_user.user_metadata.full_name.split(' ')[0]:'Sign out';btn.classList.remove('signed-out');}
@@ -723,7 +731,7 @@ async function submitNotif(){
   try{
     const res=await fetch('/.netlify/functions/staff-notifications',{
       method:'POST',
-      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
       body:JSON.stringify({content,audience,priority,expires})
     });
     const data=await res.json();
@@ -746,7 +754,7 @@ async function deleteNotif(id,rowIndex){
   try{
     const res=await fetch('/.netlify/functions/staff-notifications',{
       method:'DELETE',
-      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
       body:JSON.stringify({id,rowIndex})
     });
     const data=await res.json();
@@ -763,7 +771,7 @@ async function editNotif(id,rowIndex){
   try{
     const res=await fetch('/.netlify/functions/staff-notifications',{
       method:'PATCH',
-      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
       body:JSON.stringify({id,rowIndex,content:newContent})
     });
     const data=await res.json();
