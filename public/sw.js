@@ -1,4 +1,4 @@
-const VERSION = '2026-04-10';
+const VERSION = '2026-05-01';
 const CACHE = 'hh-' + VERSION;
 
 self.addEventListener('install', () => self.skipWaiting());

@@ -12,6 +12,7 @@
 <link rel="manifest" href="/manifest.json">
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+    <script src="https://identity.netlify.com/v1/netlify-identity-widget.js"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 :root{--bg:#0f1110;--surface:#161a18;--border:#2a3030;--text:#e8e4dc;--muted:#a8b8ac;--dim:#6b7a6e;--faint:#4a5e50;--green:#3d6b44;--green-lt:#5a9e68;--green-dk:#233028;--green2:#1a3d2b;--red:#c05c4a;--red-dk:#2e1a18;--safe-top:env(safe-area-inset-top,0px);--safe-bot:env(safe-area-inset-bottom,0px);--nav-h:60px;}
@@ -105,6 +106,41 @@ body{display:flex;flex-direction:column}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:380px){.sync-grid{grid-template-columns:1fr}.month-grid{grid-template-columns:1fr}}
+    /* Notifications page */
+    .auth-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--green-lt);font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+    .auth-btn.signed-out{color:var(--faint)}
+    .nf-form{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+    .nf-form textarea{width:100%;background:#111614;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:12px;padding:10px;resize:vertical;min-height:70px;margin-bottom:10px}
+    .nf-form textarea:focus{outline:none;border-color:var(--green)}
+    .nf-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .nf-form-row label{display:flex;flex-direction:column;gap:4px;font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+    .nf-form-row select,.nf-form-row input{background:#111614;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px}
+    .nf-form-row select:focus,.nf-form-row input:focus{outline:none;border-color:var(--green)}
+    .nf-submit{background:var(--green);border:none;border-radius:4px;color:#fff;font-family:'DM Mono',monospace;font-size:11px;padding:8px 14px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase}
+    .nf-submit:disabled{background:var(--faint);cursor:not-allowed}
+    .nf-submit:active:not(:disabled){background:var(--green-lt)}
+    .nf-msg{font-size:10px;color:var(--green-lt);margin-top:8px;display:none}
+    .nf-msg.err{color:var(--red)}
+    .nf-msg.on{display:block}
+    .nf-toggle{display:flex;background:#1e2420;border-radius:6px;padding:2px;gap:2px;margin-bottom:12px;width:fit-content}
+    .nf-toggle button{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border:none;border-radius:4px;cursor:pointer;background:transparent;color:var(--faint);transition:all .15s}
+    .nf-toggle button.active{background:var(--green);color:#fff}
+    .nf-row{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:11px}
+    .nf-row.expired{opacity:.4}
+    .nf-row-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:6px}
+    .nf-row-meta{font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase}
+    .nf-row-content{color:var(--text);line-height:1.45;margin-bottom:8px;white-space:pre-wrap;word-break:break-word}
+    .nf-row-tags{display:flex;flex-wrap:wrap;gap:5px;margin-bottom:8px}
+    .nf-tag{font-size:9px;padding:2px 6px;border-radius:3px;background:#1a2e1e;color:var(--green-lt);letter-spacing:.05em}
+    .nf-tag.high{background:var(--red-dk);color:var(--red)}
+    .nf-tag.muted{background:#1e2420;color:var(--dim)}
+    .nf-row-audit{font-size:10px;color:var(--dim);display:flex;flex-wrap:wrap;gap:8px}
+    .nf-row-actions{display:flex;gap:6px;margin-top:8px;padding-top:8px;border-top:1px solid var(--border)}
+    .nf-row-actions button{background:none;border:1px solid var(--border);border-radius:4px;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;padding:4px 8px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+    .nf-row-actions button:hover{color:var(--text)}
+    .nf-row-actions button.danger{color:var(--red);border-color:#3a1e1c}
+    .nf-empty{padding:24px;text-align:center;color:var(--faint);font-size:11px}
+    .nf-gate{padding:16px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:11px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -119,10 +155,10 @@ body{display:flex;flex-direction:column}
       <div class="hdr-time" id="hdr-time"></div>
     </div>
     <div class="hdr-bot">
-      <div class="hdr-label">Last synced</div>
-      <button class="refresh-btn" onclick="location.reload()">Refresh</button>
-      <button class="info-btn" onclick="event.stopPropagation();showTip(this,'Refresh the page to pick up any app changes')">i</button>
-    </div>
+        <div class="hdr-label">Last synced</div>
+        <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+        <button class="auth-btn signed-out" id="auth-btn" onclick="handleAuth()">Sign in</button>
+      </div>
   </div>
 </div>
 <div class="tip" id="gtip"></div>
@@ -141,7 +177,8 @@ body{display:flex;flex-direction:column}
   </div>
   <div class="section" id="sec-goals"><div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-hours"><div id="hours-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
-</div>
+    <div class="section" id="sec-notifs"><div id="notifs-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+  </div>
 <nav class="bnav">
   <button class="bnav-btn active" id="btn-overview" onclick="switchTab('overview')">
     <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="2" y="2" width="7" height="7" rx="1.5"/><rect x="11" y="2" width="7" height="7" rx="1.5"/><rect x="2" y="11" width="7" height="7" rx="1.5"/><rect x="11" y="11" width="7" height="7" rx="1.5"/></svg>
@@ -160,10 +197,14 @@ body{display:flex;flex-direction:column}
     Goals
   </button>
   <button class="bnav-btn" id="btn-hours" onclick="switchTab('hours')">
-    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/><path d="M3 4l3 3M17 4l-3 3"/></svg>
-    Hours
-  </button>
-</nav>
+      <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 6v4l2.5 2.5"/><path d="M3 4l3 3M17 4l-3 3"/></svg>
+      Hours
+    </button>
+    <button class="bnav-btn" id="btn-notifs" onclick="switchTab('notifs')">
+      <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8a5 5 0 0 1 10 0v4l1.5 2H3.5L5 12V8z"/><path d="M8 16a2 2 0 0 0 4 0"/></svg>
+      Notify
+    </button>
+  </nav>
 <script>
 const fmt=v=>'£'+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
 const fmtF=v=>(v<0?'−':'')+'£'+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
@@ -559,6 +600,184 @@ if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch
 document.getElementById('hdr-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
 loadData();
 setInterval(()=>loadData(true),3600000);
+
+// ── NETLIFY IDENTITY ───────────────────────────────────────────
+let _user=null, _showAllNotifs=false, _notifsCache=null;
+function isDirector(u){return u && u.app_metadata && (u.app_metadata.roles||[]).indexOf('director')!==-1;}
+function authToken(){return _user && _user.token && _user.token.access_token;}
+function authHeaders(){const t=authToken();return t?{'Authorization':'Bearer '+t}:{};}
+function updateAuthUI(){
+  const btn=document.getElementById('auth-btn');
+  if(_user){btn.textContent=_user.user_metadata&&_user.user_metadata.full_name?_user.user_metadata.full_name.split(' ')[0]:'Sign out';btn.classList.remove('signed-out');}
+  else{btn.textContent='Sign in';btn.classList.add('signed-out');}
+}
+function handleAuth(){
+  if(_user){
+    if(confirm('Sign out?')) window.netlifyIdentity.logout();
+  } else window.netlifyIdentity.open();
+}
+if(window.netlifyIdentity){
+  netlifyIdentity.on('init', user=>{_user=user;updateAuthUI();});
+  netlifyIdentity.on('login', user=>{_user=user;updateAuthUI();netlifyIdentity.close();if(document.getElementById('btn-notifs').classList.contains('active'))loadNotifs();});
+  netlifyIdentity.on('logout', ()=>{_user=null;updateAuthUI();if(document.getElementById('btn-notifs').classList.contains('active'))renderNotifs(_notifsCache);});
+}
+
+// ── NOTIFICATIONS ──────────────────────────────────────────────
+async function loadNotifs(){
+  const c=document.getElementById('notifs-content');
+  c.innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
+  try{
+    const url='/.netlify/functions/staff-notifications'+(_showAllNotifs?'?showAll=1':'');
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    _notifsCache=data;
+    renderNotifs(data);
+  }catch(e){
+    c.innerHTML='<div class="loading" style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function escHtml(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function fmtNotifDate(s){if(!s)return '—';try{const d=new Date(s);return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'})+' '+d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});}catch(e){return s;}}
+
+function renderNotifs(data){
+  const c=document.getElementById('notifs-content');
+  const dir=isDirector(_user);
+  const signedIn=!!_user;
+  const items=(data&&data.items)||[];
+  let html='<div class="slabel">Staff Notifications</div>';
+
+  // Form (sign-in gated)
+  if(signedIn){
+    html+=`<div class="nf-form">
+      <textarea id="nf-content" placeholder="Notification text — what should staff know?"></textarea>
+      <div class="nf-form-row">
+        <label>Audience<select id="nf-audience"><option value="all">All staff</option><option value="Laure Jeanjean">Laure Jeanjean</option><option value="Alex Honnor">Alex Honnor</option><option value="Sam Barton">Sam Barton</option><option value="Nadia Beeley">Nadia Beeley</option></select></label>
+        <label>Priority<select id="nf-priority"><option value="normal">Normal</option><option value="high">High</option></select></label>
+      </div>
+      <div class="nf-form-row">
+        <label>Expires (optional)<input type="date" id="nf-expires"></label>
+        <label style="visibility:hidden">spacer<input type="text"></label>
+      </div>
+      <button class="nf-submit" id="nf-submit" onclick="submitNotif()">Add Notification</button>
+      <div class="nf-msg" id="nf-msg"></div>
+    </div>`;
+  } else {
+    html+='<div class="nf-gate">Sign in (top right) to add a notification.</div>';
+  }
+
+  // Toggle
+  html+=`<div class="nf-toggle">
+    <button class="${_showAllNotifs?'':'active'}" onclick="setNotifsRange(false)">Last 30 days</button>
+    <button class="${_showAllNotifs?'active':''}" onclick="setNotifsRange(true)">Show older</button>
+  </div>`;
+
+  // List
+  if(items.length===0){
+    html+='<div class="nf-empty">No notifications.</div>';
+  } else {
+    items.forEach(it=>{
+      const isExpired=String(it.status||'').toLowerCase()==='expired';
+      const audienceLabel=it.audience==='all'?'All staff':escHtml(it.audience);
+      const sourceLabel=it.source==='asset_tracker'?'Maintenance':it.source==='dashboard_metrics'?'Metrics':'Manual';
+      const priorityTag=it.priority==='high'?'<span class="nf-tag high">High priority</span>':'';
+      const sourceTag=`<span class="nf-tag muted">${sourceLabel}</span>`;
+      const audienceTag=`<span class="nf-tag muted">${audienceLabel}</span>`;
+      const expiresTag=it.expires?`<span class="nf-tag muted">Expires ${escHtml(it.expires)}</span>`:'';
+      const expiredTag=isExpired?'<span class="nf-tag muted">Expired</span>':'';
+      const audit=it.delivered.length>0
+        ? `<div class="nf-row-audit">Delivered to ${it.delivered.length}: ${escHtml(it.delivered.join(', '))} &middot; Read by ${it.read.length}</div>`
+        : '<div class="nf-row-audit" style="color:var(--faint)">Pending — not yet delivered</div>';
+      const actions=dir&&!isExpired
+        ? `<div class="nf-row-actions">
+            <button onclick="editNotif('${it.id}',${it.rowIndex})">Edit</button>
+            <button class="danger" onclick="deleteNotif('${it.id}',${it.rowIndex})">Delete</button>
+          </div>` : '';
+      html+=`<div class="nf-row${isExpired?' expired':''}">
+        <div class="nf-row-top">
+          <div class="nf-row-meta">${fmtNotifDate(it.created)}</div>
+        </div>
+        <div class="nf-row-content">${escHtml(it.content)}</div>
+        <div class="nf-row-tags">${priorityTag}${sourceTag}${audienceTag}${expiresTag}${expiredTag}</div>
+        ${audit}
+        ${actions}
+      </div>`;
+    });
+  }
+
+  c.innerHTML=html;
+}
+
+function setNotifsRange(showAll){_showAllNotifs=showAll;loadNotifs();}
+
+async function submitNotif(){
+  const content=document.getElementById('nf-content').value.trim();
+  const audience=document.getElementById('nf-audience').value;
+  const priority=document.getElementById('nf-priority').value;
+  const expires=document.getElementById('nf-expires').value;
+  const msg=document.getElementById('nf-msg');
+  const btn=document.getElementById('nf-submit');
+  if(!content){msg.textContent='Content required.';msg.className='nf-msg err on';return;}
+  btn.disabled=true;msg.className='nf-msg';
+  try{
+    const res=await fetch('/.netlify/functions/staff-notifications',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      body:JSON.stringify({content,audience,priority,expires})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    msg.textContent='Added.';msg.className='nf-msg on';
+    document.getElementById('nf-content').value='';
+    document.getElementById('nf-expires').value='';
+    document.getElementById('nf-priority').value='normal';
+    document.getElementById('nf-audience').value='all';
+    setTimeout(()=>{msg.classList.remove('on');loadNotifs();},800);
+  }catch(e){
+    msg.textContent='Error: '+e.message;msg.className='nf-msg err on';
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function deleteNotif(id,rowIndex){
+  if(!confirm('Mark this notification as expired? It will stop appearing in briefings but the row stays in the sheet.'))return;
+  try{
+    const res=await fetch('/.netlify/functions/staff-notifications',{
+      method:'DELETE',
+      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      body:JSON.stringify({id,rowIndex})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    loadNotifs();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function editNotif(id,rowIndex){
+  const item=(_notifsCache.items||[]).find(i=>i.id===id);
+  if(!item){alert('Notification not found — refresh.');return;}
+  const newContent=prompt('Edit content:', item.content);
+  if(newContent===null)return;
+  try{
+    const res=await fetch('/.netlify/functions/staff-notifications',{
+      method:'PATCH',
+      headers:Object.assign({'Content-Type':'application/json'},authHeaders()),
+      body:JSON.stringify({id,rowIndex,content:newContent})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    loadNotifs();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// Wire up: load notifications when the tab is opened
+const _origSwitchTab=switchTab;
+window.switchTab=function(tab){
+  _origSwitchTab(tab);
+  if(tab==='notifs')loadNotifs();
+};
 </script>
 </body>
 </html>
