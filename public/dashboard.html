@@ -607,7 +607,7 @@ function isDirector(u){return u && u.app_metadata && (u.app_metadata.roles||[]).
 async function authHeaders(){
   if(!_user)return {};
   try{
-    const t=await _user.jwt();
+    const t=await _user.jwt(true);
     return t?{'Authorization':'Bearer '+t}:{};
   }catch(e){
     console.error('jwt error', e);
