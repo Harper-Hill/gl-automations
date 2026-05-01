@@ -605,12 +605,30 @@ setInterval(()=>loadData(true),3600000);
 let _user=null, _showAllNotifs=false, _notifsCache=null;
 function isDirector(u){return u && u.app_metadata && (u.app_metadata.roles||[]).indexOf('director')!==-1;}
 async function authHeaders(){
-  if(!_user)return {};
-  try{
-    const t=await _user.jwt(true);
-    return t?{'Authorization':'Bearer '+t}:{};
-  }catch(e){
-    console.error('jwt error', e);
+  if(!_user || !_user.token || !_user.token.refresh_token) return {};
+  // ALWAYS refresh — no cache check
+  try {
+    const r = await fetch('/.netlify/identity/token', {
+      method:'POST',
+      headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:'grant_type=refresh_token&refresh_token='+encodeURIComponent(_user.token.refresh_token)
+    });
+    if(!r.ok){
+      const txt = await r.text();
+      console.error('Refresh failed:', r.status, txt);
+      return {};
+    }
+    const j = await r.json();
+    _user.token = {
+      access_token: j.access_token,
+      refresh_token: j.refresh_token || _user.token.refresh_token,
+      expires_in: j.expires_in,
+      token_type: j.token_type,
+      expires_at: Date.now() + (j.expires_in * 1000)
+    };
+    return {'Authorization':'Bearer '+j.access_token};
+  } catch(e) {
+    console.error('Refresh error:', e);
     return {};
   }
 }
