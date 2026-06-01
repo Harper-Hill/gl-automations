@@ -8,14 +8,10 @@
 
 async function fetchServiceAccount() {
   try {
-    const { getStore } = require('@netlify/blobs');
-    const store = getStore({
-      name: 'service-account',
-      siteID: process.env.NETLIFY_SITE_ID,
-      token: process.env.NETLIFY_ACCESS_TOKEN,
-    });
+    const { getStore } = require("@netlify/blobs");
+    const store = getStore({ name: "service-account", siteID: process.env.NETLIFY_SITE_ID, token: process.env.NETLIFY_ACCESS_TOKEN });
     const raw = await store.get('sa_json');
-    if (!raw) throw new Error('SA JSON not found in Netlify Blobs');
+    if (!raw) throw new Error("SA JSON not found in Netlify Blobs");
     return JSON.parse(raw);
   } catch(e) {
     console.error('fetchServiceAccount failed:', e.message);
@@ -320,9 +316,6 @@ async function recheckPending(token) {
 
 // ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
-  if (event.httpMethod && event.httpMethod !== 'GET') {
-    return { statusCode: 405, body: 'Method Not Allowed' };
-  }
 
   try {
       // 1. Auth
@@ -365,9 +358,9 @@ exports.handler = async (event) => {
 
       const { savingsGoals: spaces = [] } = await starling(`/api/v2/account/${accountUid}/spaces`);
       for (const sp of spaces) {
-        if (!sp.savedObjectUid) continue;
+        if (!sp.savingsGoalUid) continue;
         const { feedItems: stxs = [] } = await starling(
-          `/api/v2/feed/account/${accountUid}/category/${sp.savedObjectUid}?changesSince=${encodeURIComponent(since)}`
+          `/api/v2/feed/account/${accountUid}/category/${sp.savingsGoalUid}?changesSince=${encodeURIComponent(since)}`
         );
         for (const tx of stxs) {
           if (existingIds.has(tx.feedItemUid)) continue;
