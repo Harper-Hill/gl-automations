@@ -1,4 +1,4 @@
-const VERSION = '2026-05-01';
+const VERSION = '2026-06-12';
 const CACHE = 'hh-' + VERSION;
 
 self.addEventListener('install', () => self.skipWaiting());
@@ -12,12 +12,20 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Always network for API / function calls — never cache
+  if (url.pathname.startsWith('/.netlify/')) {
+    e.respondWith(fetch(e.request));
+    return;
+  }
+
   // Always fetch HTML fresh from network
   if (url.pathname.endsWith('.html') || url.pathname === '/') {
     e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
     return;
   }
-  // Cache-first for everything else (fonts, Chart.js)
+
+  // Cache-first for static assets only (fonts, Chart.js, icons)
   e.respondWith(
     caches.match(e.request).then(cached => {
       if (cached) return cached;

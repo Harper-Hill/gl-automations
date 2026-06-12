@@ -156,7 +156,7 @@ body{display:flex;flex-direction:column}
     </div>
     <div class="hdr-bot">
         <div class="hdr-label">Last synced</div>
-        <button class="refresh-btn" onclick="location.reload()">Refresh</button>
+        <button class="refresh-btn" onclick="hardRefresh()">Refresh</button>
         <button class="auth-btn signed-out" id="auth-btn" onclick="handleAuth()">Sign in</button>
       </div>
   </div>
@@ -595,6 +595,21 @@ async function loadData(silent){
     document.getElementById('overview-content').innerHTML='<div class="loading" style="color:var(--red)">Error: '+e.message+'</div>';
     document.getElementById('live-dot').style.background='#c05c4a';
   }
+}
+async function hardRefresh() {
+  try {
+    if ('caches' in window) {
+      const names = await caches.keys();
+      await Promise.all(names.map(n => caches.delete(n)));
+    }
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r => r.update()));
+    }
+  } catch(e) { console.warn('hardRefresh cleanup failed:', e); }
+  const url = new URL(window.location.href);
+  url.searchParams.set('_t', Date.now());
+  window.location.replace(url.toString());
 }
 if('serviceWorker' in navigator)navigator.serviceWorker.register('/sw.js').catch(()=>{});
 document.getElementById('hdr-time').textContent=new Date().toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
