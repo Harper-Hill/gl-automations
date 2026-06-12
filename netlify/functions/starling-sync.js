@@ -95,6 +95,30 @@ function starling(path) {
     headers: { Authorization: `Bearer ${CFG.STARLING_TOKEN}`, Accept: 'application/json' },
   }).then(r => r.data);
 }
+// Sum of main account effectiveBalance + all spaces' totalSaved, returned in £
+async function fetchTotalBalance() {
+  const { accounts = [] } = await starling('/api/v2/accounts');
+  let pence = 0;
+  for (const { accountUid } of accounts) {
+    const bal = await starling(`/api/v2/accounts/${accountUid}/balance`);
+    pence += (bal.effectiveBalance && bal.effectiveBalance.minorUnits) || 0;
+    const { savingsGoals = [] } = await starling(`/api/v2/account/${accountUid}/spaces`);
+    for (const sg of savingsGoals) {
+      pence += (sg.totalSaved && sg.totalSaved.minorUnits) || 0;
+    }
+  }
+  return pence / 100;
+}
+
+// UK-local month/year + Cash At Bank row (Jan=86 ... Dec=97) for a given Date
+function monthRowFromDate(d) {
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/London', month: 'numeric', year: 'numeric'
+  }).formatToParts(d);
+  const year = +parts.find(p => p.type === 'year').value;
+  const month = +parts.find(p => p.type === 'month').value;
+  return { year, month, row: 85 + month };
+}
 
 function sheetsGet(token, range) {
   return httpsReq({
@@ -394,6 +418,31 @@ exports.handler = async (event) => {
       await sortExpenses(gToken);
     }
 
+    // 5b. Update Cash At Bank balance on Overhead Calcs
+    try {
+      const balance = await fetchTotalBalance();
+      const sinceMonth = monthRowFromDate(new Date(since));
+      const nowMonth = monthRowFromDate(new Date());
+
+      // If UK month rolled over since last sync, freeze the previous month
+      if (sinceMonth.year === 2026 && nowMonth.year === 2026
+          && sinceMonth.month !== nowMonth.month) {
+        await sheetsPut(gToken, `Overhead Calcs!C${sinceMonth.row}`, [[balance]]);
+        console.log(`Cash At Bank: froze month ${sinceMonth.month} → C${sinceMonth.row} at £${balance}`);
+      }
+
+      // Update current month
+      if (nowMonth.year === 2026) {
+        await sheetsPut(gToken, `Overhead Calcs!C${nowMonth.row}`, [[balance]]);
+        console.log(`Cash At Bank: £${balance} → C${nowMonth.row}`);
+      } else {
+        console.warn(`Cash At Bank: skipping — outside 2026 (got ${nowMonth.year}). Set up new sheet.`);
+      }
+    } catch(e) {
+      console.error('Balance update failed:', e.message);
+      // Non-fatal — don't break the sync if this fails
+    }
+    
     // 6. Update last sync time
     await sheetsPut(gToken, 'Config!B2', [[syncTime]]);
 
