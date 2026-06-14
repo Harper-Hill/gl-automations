@@ -397,7 +397,7 @@ async function pushSalaryPayments(token) {
     const supplier = (row[2] || '').trim().toLowerCase();// C
     const desc     = (row[3] || '');                     // D
     const source   = (row[6] || '').trim().toLowerCase();// G
-    const amount   = parseFloat(row[10] || '0');         // K
+    const amount   = parseFloat(String(row[10] || '0').replace(/,/g, '')); // K — strip thousands separators
 
     if (!date || !amount) continue;
     if (source !== SALARY_SOURCE) continue;              // skip forecast rows (no bank source)
