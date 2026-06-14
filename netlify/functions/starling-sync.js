@@ -446,7 +446,7 @@ async function pushSalaryPayments(token) {
 
       const writes = [];
       if (a.wage > 0)    writes.push({ range: `${tab}!M${rowNum}`, val: a.wage });
-      if (a.mileage > 0) writes.push({ range: `${tab}!N${rowNum}`, val: a.mileage });
+      if (a.mileage > 0) writes.push({ range: `${tab}!M${rowNum}`, val: a.mileage });
 
       for (const w of writes) {
         if (DRY_RUN) {
