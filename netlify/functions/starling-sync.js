@@ -6,8 +6,9 @@
 // ================================================================
 'use strict';
 const DRY_RUN = true;   // ← logs intended writes, touches no workbook. Set false to go live.
-const WAGE_CATEGORIES = ['direct labour costs (salaries)']; // lowercased exp-cat = wage
-const MILEAGE_RE = /mile/i;                                  // description contains "mile" = mileage
+const SALARY_SOURCE = 'starling';        // col G must equal this (real bank payment, not forecast)
+const WAGE_RE    = /^\s*wage/i;          // description starts "Wage" (incl. "Wage Correction") → M
+const MILEAGE_RE = /mile/i;              // description contains "mile" → N
 
 async function fetchServiceAccount() {
   try {
@@ -392,17 +393,19 @@ async function pushSalaryPayments(token) {
   // affected[wbId|tab|date] = { wbId, tab, name, date, wage, mileage }
   const affected = {};
   for (const row of rows) {
-    const date     = (row[0]  || '').trim();   // A dd/mm/yyyy
-    const supplier = (row[2]  || '').trim().toLowerCase(); // C
-    const desc     = (row[3]  || '');          // D
-    const expCat   = (row[7]  || '').trim().toLowerCase(); // H
-    const amount   = parseFloat(row[10] || '0'); // K
+    const date     = (row[0] || '').trim();              // A dd/mm/yyyy
+    const supplier = (row[2] || '').trim().toLowerCase();// C
+    const desc     = (row[3] || '');                     // D
+    const source   = (row[6] || '').trim().toLowerCase();// G
+    const amount   = parseFloat(row[10] || '0');         // K
+
     if (!date || !amount) continue;
+    if (source !== SALARY_SOURCE) continue;              // skip forecast rows (no bank source)
 
     const match = staff.find(s => supplier.includes(s.alias));
     if (!match) continue;
 
-    const isWage    = WAGE_CATEGORIES.includes(expCat);
+    const isWage    = WAGE_RE.test(desc);
     const isMileage = MILEAGE_RE.test(desc);
     if (!isWage && !isMileage) continue;
 
