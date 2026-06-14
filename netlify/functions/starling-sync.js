@@ -5,7 +5,7 @@
 // New rows get light blue fill (needs manual review)
 // ================================================================
 'use strict';
-const DRY_RUN = true;   // ← logs intended writes, touches no workbook. Set false to go live.
+const DRY_RUN = false;   // ← logs intended writes, touches no workbook. Set false to go live.
 const SALARY_SOURCE = 'starling';        // col G must equal this (real bank payment, not forecast)
 const WAGE_RE    = /^\s*wage/i;          // description starts "Wage" (incl. "Wage Correction") → M
 const MILEAGE_RE = /mile/i;              // description contains "mile" → N
