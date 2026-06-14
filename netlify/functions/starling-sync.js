@@ -5,6 +5,9 @@
 // New rows get light blue fill (needs manual review)
 // ================================================================
 'use strict';
+const DRY_RUN = true;   // ← logs intended writes, touches no workbook. Set false to go live.
+const WAGE_CATEGORIES = ['direct labour costs (salaries)']; // lowercased exp-cat = wage
+const MILEAGE_RE = /mile/i;                                  // description contains "mile" = mileage
 
 async function fetchServiceAccount() {
   try {
@@ -26,6 +29,8 @@ const CFG = {
   SHEET_ID:       process.env.GL_SHEET_ID,
   EXPENSES_TAB:   process.env.GL_EXPENSES_TAB || 'Expenses',
   EXPENSES_GID:   parseInt(process.env.GL_EXPENSES_GID, 10),
+  STAFF_CONFIG_TAB: process.env.GL_STAFF_CONFIG_TAB || 'Staff Config',
+  SYNC_LOG_TAB:     process.env.GL_SYNC_LOG_TAB || 'Sync Log',
 };
 
 // ── Classification rules (loaded from Sync Rules sheet tab) ──────
@@ -154,6 +159,25 @@ function sheetsBatchUpdate(token, requests) {
     method: 'POST',
     headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
   }, { requests });
+}
+
+// ── Cross-workbook helpers (take an explicit spreadsheet ID) ─────
+function wbGet(token, sheetId, range) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}`,
+    method: 'GET',
+    headers: { Authorization: `Bearer ${token}` },
+  }).then(r => r.data);
+}
+
+function wbPut(token, sheetId, range, values) {
+  return httpsReq({
+    hostname: 'sheets.googleapis.com',
+    path: `/v4/spreadsheets/${sheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`,
+    method: 'PUT',
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+  }, { range, majorDimension: 'ROWS', values });
 }
 
 async function getGoogleToken(sa) {
@@ -338,6 +362,125 @@ async function recheckPending(token) {
   console.log(`recheckPending: ${updates.length} transactions updated`);
 }
 
+// ════════════════════════════════════════════════════════════════
+// Push employee Wage/Mileage payments into Salary Workings workbooks
+//   Wage    → column M   Mileage → column N
+//   Authoritative recompute: for each (employee, date) we re-sum ALL
+//   matching Expenses rows and write that total. Idempotent on re-run,
+//   sums same-day multiples, self-heals on corrections.
+//   Writes M/N even on Approved rows (only timesheet cols are locked).
+// ════════════════════════════════════════════════════════════════
+async function pushSalaryPayments(token) {
+  // 3a. Load Staff Config → map Starling payee alias → { wbId, tab, name }
+  const cfg = await sheetsGet(token, `${CFG.STAFF_CONFIG_TAB}!A2:H1000`);
+  const staff = [];
+  for (const r of (cfg.values || [])) {
+    const wbId = (r[2] || '').trim();      // C = Workbook ID
+    const tab  = (r[3] || '2026').trim();  // D = Workbook Tab
+    const active = String(r[5] || '').trim().toUpperCase() === 'TRUE'; // F
+    const payees = (r[7] || '').trim();    // H = Starling Payee (comma-sep aliases)
+    if (!wbId || !active || !payees) continue;
+    for (const alias of payees.split(',').map(s => s.trim().toLowerCase()).filter(Boolean)) {
+      staff.push({ alias, wbId, tab, name: (r[1] || r[0] || '').trim() });
+    }
+  }
+  if (!staff.length) { console.log('pushSalaryPayments: no active staff with payees'); return; }
+
+  // 3b. Read full Expenses tab, collect employee wage/mileage payments
+  const exp = await sheetsGet(token, `${CFG.EXPENSES_TAB}!A:T`);
+  const rows = exp.values || [];
+  // affected[wbId|tab|date] = { wbId, tab, name, date, wage, mileage }
+  const affected = {};
+  for (const row of rows) {
+    const date     = (row[0]  || '').trim();   // A dd/mm/yyyy
+    const supplier = (row[2]  || '').trim().toLowerCase(); // C
+    const desc     = (row[3]  || '');          // D
+    const expCat   = (row[7]  || '').trim().toLowerCase(); // H
+    const amount   = parseFloat(row[10] || '0'); // K
+    if (!date || !amount) continue;
+
+    const match = staff.find(s => supplier.includes(s.alias));
+    if (!match) continue;
+
+    const isWage    = WAGE_CATEGORIES.includes(expCat);
+    const isMileage = MILEAGE_RE.test(desc);
+    if (!isWage && !isMileage) continue;
+
+    const key = `${match.wbId}|${match.tab}|${date}`;
+    if (!affected[key]) affected[key] = { wbId: match.wbId, tab: match.tab, name: match.name, date, wage: 0, mileage: 0 };
+    if (isWage)    affected[key].wage    += amount;
+    if (isMileage) affected[key].mileage += amount;
+  }
+
+  const keys = Object.keys(affected);
+  if (!keys.length) { console.log('pushSalaryPayments: no matching payments'); return; }
+
+  // 3c. For each affected workbook, map dates → row numbers (col A), write M/N
+  const byWb = {};
+  for (const k of keys) { const a = affected[k]; (byWb[a.wbId + '|' + a.tab] ||= []).push(a); }
+
+  for (const grp of Object.keys(byWb)) {
+    const [wbId, tab] = grp.split('|');
+    let dateCol;
+    try {
+      dateCol = await wbGet(token, wbId, `${tab}!A1:A2000`);
+    } catch (e) {
+      console.error(`pushSalaryPayments: cannot read ${wbId} (${tab}) — ${e.message}`); continue;
+    }
+    const colA = (dateCol.values || []).map(r => (r[0] || '').trim());
+    // Build dd/mm/yyyy → 1-based row index (sheet rows). Col A holds long-form
+    // dates like "Monday, 1 June 2026"; normalise both sides to a comparable key.
+    const rowFor = {};
+    colA.forEach((cell, i) => {
+      const norm = normaliseDate(cell);
+      if (norm) rowFor[norm] = i + 1;
+    });
+
+    for (const a of byWb[grp]) {
+      const norm = normaliseDate(a.date);
+      const rowNum = rowFor[norm];
+      if (!rowNum) { console.warn(`  ${a.name}: no row for ${a.date} (${norm}) — skipped`); continue; }
+
+      const writes = [];
+      if (a.wage > 0)    writes.push({ range: `${tab}!M${rowNum}`, val: a.wage });
+      if (a.mileage > 0) writes.push({ range: `${tab}!N${rowNum}`, val: a.mileage });
+
+      for (const w of writes) {
+        if (DRY_RUN) {
+          console.log(`  [DRY] ${a.name} ${a.date} → ${w.range} = ${w.val.toFixed(2)}`);
+        } else {
+          await wbPut(token, wbId, w.range, [[w.val.toFixed(2)]]);
+          console.log(`  ${a.name} ${a.date} → ${w.range} = ${w.val.toFixed(2)}`);
+          await logSync(token, a.name, a.date, w.range.includes('M') ? 'wage' : 'mileage', w.val);
+        }
+      }
+    }
+  }
+}
+
+// Normalise either "Monday, 1 June 2026" or "01/06/2026" → "2026-06-01"
+function normaliseDate(s) {
+  if (!s) return null;
+  s = String(s).trim();
+  let m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);  // dd/mm/yyyy
+  if (m) return `${m[3]}-${m[2].padStart(2,'0')}-${m[1].padStart(2,'0')}`;
+  const months = { january:'01',february:'02',march:'03',april:'04',may:'05',june:'06',july:'07',august:'08',september:'09',october:'10',november:'11',december:'12' };
+  m = s.match(/(\d{1,2})\s+([a-z]+)\s+(\d{4})/i);       // "1 June 2026"
+  if (m) { const mo = months[m[2].toLowerCase()]; if (mo) return `${m[3]}-${mo}-${m[1].padStart(2,'0')}`; }
+  return null;
+}
+
+async function logSync(token, name, date, kind, val) {
+  try {
+    await httpsReq({
+      hostname: 'sheets.googleapis.com',
+      path: `/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.SYNC_LOG_TAB + '!A:F')}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`,
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+    }, { values: [[new Date().toISOString(), name, date, `salary-payment:${kind}`, val.toFixed(2), 'starling-sync']] });
+  } catch (e) { console.error('logSync failed:', e.message); }
+}
+
 // ── Main handler ──────────────────────────────────────────────────
 exports.handler = async (event) => {
 
@@ -416,6 +559,13 @@ exports.handler = async (event) => {
       }
 
       await sortExpenses(gToken);
+    }
+
+    // 5a. Push employee Wage/Mileage payments into Salary Workings workbooks
+    try {
+      await pushSalaryPayments(gToken);
+    } catch (e) {
+      console.error('pushSalaryPayments failed:', e.message); // non-fatal
     }
 
     // 5b. Update Cash At Bank balance on Overhead Calcs
