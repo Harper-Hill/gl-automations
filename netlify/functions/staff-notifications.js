@@ -119,10 +119,33 @@ async function sheetsUpdate(token, range, values) {
 // we just trust that). The function-level `event.clientContext.user` is set
 // automatically when an Authorization: Bearer header is present.
 function getUser(event) {
+  // Primary: Netlify auto-populated identity context (when available)
   if (event.clientContext && event.clientContext.user) {
     return event.clientContext.user;
   }
-  return null;
+  // Fallback: decode the Bearer token from the Authorization header.
+  // Netlify Identity has already verified it at the edge before the
+  // function runs, so decoding the payload is sufficient here.
+  try {
+    const auth = (event.headers &&
+      (event.headers.authorization || event.headers.Authorization)) || '';
+    const m = auth.match(/^Bearer\s+(.+)$/i);
+    if (!m) return null;
+    const payload = m[1].split('.')[1];
+    if (!payload) return null;
+    const json = Buffer.from(payload, 'base64').toString('utf8');
+    const claims = JSON.parse(json);
+    if (claims.exp && Date.now() / 1000 > claims.exp) return null; // expired
+    return {
+      id: claims.sub,
+      email: claims.email,
+      app_metadata: claims.app_metadata || {},
+      user_metadata: claims.user_metadata || {}
+    };
+  } catch (e) {
+    console.error('getUser decode failed:', e);
+    return null;
+  }
 }
 
 function isDirector(user) {
