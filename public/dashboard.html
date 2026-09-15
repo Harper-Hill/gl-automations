@@ -173,7 +173,7 @@ body{display:flex;flex-direction:column}
     .ob-part{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green-lt);margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border)}
     .ob-part:first-child{margin-top:0;padding-top:0;border-top:none}
     .ob-phase-head{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}
-    .ob-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;font-size:11px;color:var(--muted);line-height:1.4}
+    .ob-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;font-size:11px;color:var(--muted);line-height:1.4;flex:1;min-width:0}
     .ob-item.checked{color:var(--dim);text-decoration:line-through}
     .ob-item input{margin-top:2px;flex-shrink:0;accent-color:var(--green)}
     .ob-tag{font-size:8px;padding:1px 5px;border-radius:3px;background:#1e2420;color:var(--dim);letter-spacing:.05em;margin-left:6px;white-space:nowrap}
@@ -195,8 +195,13 @@ body{display:flex;flex-direction:column}
     .ob-email-row button{background:none;border:1px solid var(--border);border-radius:4px;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
     .ob-email-row button:hover{color:var(--text)}
     .ob-item-row{display:flex;flex-direction:column;gap:4px;padding:6px 0}
-    .ob-item-line{display:flex;align-items:flex-start;gap:8px}
+    .ob-item-line{display:flex;align-items:flex-start;justify-content:space-between;gap:8px}
     .ob-item-extra{display:flex;align-items:center;gap:8px;margin-left:22px;flex-wrap:wrap}
+    .ob-item-toggle{background:none;border:none;padding:2px 2px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--faint);flex-shrink:0;font-family:'DM Mono',monospace;margin-top:1px}
+    .ob-item-toggle:hover{color:var(--text)}
+    .ob-chevron-sm{width:11px;height:11px;transition:transform .15s;flex-shrink:0}
+    .ob-chevron-sm.open{transform:rotate(90deg)}
+    .ob-mini-badge{font-size:8px;padding:2px 6px;border-radius:8px;background:#1a2e1e;color:var(--green-lt);letter-spacing:.05em;text-transform:uppercase;white-space:nowrap}
     .ob-upload-btn{background:none;border:1px dashed var(--border);border-radius:4px;color:var(--green-lt);font-family:'DM Mono',monospace;font-size:9px;padding:4px 9px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase}
     .ob-upload-btn:hover{border-color:var(--green)}
     .ob-upload-btn:disabled{opacity:.5;cursor:wait}
@@ -1017,7 +1022,7 @@ let OB_TOTAL=0;
 OB_PHASES.forEach(phase=>{
   phase.items=phase.items.map((it,i)=>{OB_TOTAL++;return{id:phase.key+'-'+i,text:it[0],tag:it[1],meta:it[2]||{}};});
 });
-let _obShowArchived=false, _obOpenId=null, _obCache=null, _obActiveForm=null;
+let _obShowArchived=false, _obOpenId=null, _obCache=null, _obActiveForm=null, _obExpandedItems=new Set();
 function obTag(tag){
   if(tag==='none'||!tag)return '';
   const label=tag==='statutory'?'Statutory':tag==='recommended'?'Recommended':'Company system';
@@ -1120,40 +1125,58 @@ function renderOnboarding(data){
           phase.items.forEach(it=>{
             const isChecked=!!checks[it.id];
             const meta=it.meta||{};
-            html+=`<div class="ob-item-row">
-              <label class="ob-item${isChecked?' checked':''} ob-item-line">
-                <input type="checkbox" ${isChecked?'checked':''} ${signedIn?'':'disabled'} onchange="toggleObCheck('${s.id}',${s.rowIndex},'${it.id}',this.checked)">
-                <span>${escHtml(it.text)}${obTag(it.tag)}${meta.i?ib(meta.i):''}</span>
-              </label>`;
+            const hasExtra=!!(meta.u||meta.f);
+            const itemKey=s.id+'|'+it.id;
+            const isFormOpen=_obActiveForm&&_obActiveForm.starterId===s.id&&_obActiveForm.itemId===it.id;
+            const isExpanded=hasExtra&&(_obExpandedItems.has(itemKey)||isFormOpen);
 
-            if(meta.u){
-              const ev=s.evidence&&s.evidence[it.id];
-              html+='<div class="ob-item-extra">';
-              if(ev){
-                html+=`<span class="ob-evidence-ok">Uploaded — <a href="${ev.webViewLink||'#'}" target="_blank" rel="noopener">${escHtml(ev.name||'file')}</a></span>`;
-                if(signedIn)html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Replace</button>`;
-              } else if(signedIn){
-                html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Upload / photo</button>`;
-              }
-              html+='</div>';
+            // Compact "done" indicator shown when the item is collapsed, so
+            // you can tell evidence/forms are handled without expanding.
+            let miniBadge='';
+            if(hasExtra&&!isExpanded){
+              if(meta.u&&s.evidence&&s.evidence[it.id])miniBadge='✓ Uploaded';
+              else if(meta.f==='nok'&&(s.nextOfKin||[]).length)miniBadge='✓ '+(s.nextOfKin||[]).length+' added';
+              else if((meta.f==='hmrc'&&s.hmrcStatus==='saved')||(meta.f==='bank'&&s.bankStatus==='saved'))miniBadge='✓ Saved';
             }
 
-            if(meta.f){
-              const isFormOpen=_obActiveForm&&_obActiveForm.starterId===s.id&&_obActiveForm.itemId===it.id;
-              html+='<div class="ob-item-extra">';
-              if(meta.f==='nok'){
-                const n=(s.nextOfKin||[]).length;
-                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','nok')">${n?'Edit next of kin ('+n+')':'Add next of kin'}</button>`;
-                if(!isFormOpen&&n)html+=`<span class="ob-form-done">${(s.nextOfKin||[]).map(c=>escHtml(c.name)).join(', ')}</span>`;
-              } else if(meta.f==='hmrc'){
-                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','hmrc')">${s.hmrcStatus==='saved'?'Edit HMRC checklist':'Fill in HMRC checklist'}</button>`;
-                if(s.hmrcStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
-              } else if(meta.f==='bank'){
-                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','bank')">${s.bankStatus==='saved'?'Edit bank details':'Add bank details'}</button>`;
-                if(s.bankStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
+            html+=`<div class="ob-item-row">
+              <div class="ob-item-line">
+                <label class="ob-item${isChecked?' checked':''}">
+                  <input type="checkbox" ${isChecked?'checked':''} ${signedIn?'':'disabled'} onchange="toggleObCheck('${s.id}',${s.rowIndex},'${it.id}',this.checked)">
+                  <span>${escHtml(it.text)}${obTag(it.tag)}${meta.i?ib(meta.i):''}</span>
+                </label>
+                ${hasExtra?`<button type="button" class="ob-item-toggle" onclick="toggleObItemExpand('${s.id}','${it.id}')" aria-label="${isExpanded?'Hide details':'Show details'}">${miniBadge?`<span class="ob-mini-badge">${miniBadge}</span>`:''}<svg class="ob-chevron-sm${isExpanded?' open':''}" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4l6 6-6 6"/></svg></button>`:''}
+              </div>`;
+
+            if(isExpanded){
+              if(meta.u){
+                const ev=s.evidence&&s.evidence[it.id];
+                html+='<div class="ob-item-extra">';
+                if(ev){
+                  html+=`<span class="ob-evidence-ok">Uploaded — <a href="${ev.webViewLink||'#'}" target="_blank" rel="noopener">${escHtml(ev.name||'file')}</a></span>`;
+                  if(signedIn)html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Replace</button>`;
+                } else if(signedIn){
+                  html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Upload / photo</button>`;
+                }
+                html+='</div>';
               }
-              html+='</div>';
-              if(isFormOpen)html+=renderObInlineForm(s,it,meta.f);
+
+              if(meta.f){
+                html+='<div class="ob-item-extra">';
+                if(meta.f==='nok'){
+                  const n=(s.nextOfKin||[]).length;
+                  if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','nok')">${n?'Edit next of kin ('+n+')':'Add next of kin'}</button>`;
+                  if(!isFormOpen&&n)html+=`<span class="ob-form-done">${(s.nextOfKin||[]).map(c=>escHtml(c.name)).join(', ')}</span>`;
+                } else if(meta.f==='hmrc'){
+                  if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','hmrc')">${s.hmrcStatus==='saved'?'Edit HMRC checklist':'Fill in HMRC checklist'}</button>`;
+                  if(s.hmrcStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
+                } else if(meta.f==='bank'){
+                  if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','bank')">${s.bankStatus==='saved'?'Edit bank details':'Add bank details'}</button>`;
+                  if(s.bankStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
+                }
+                html+='</div>';
+                if(isFormOpen)html+=renderObInlineForm(s,it,meta.f);
+              }
             }
 
             html+='</div>';
@@ -1182,6 +1205,16 @@ function renderOnboarding(data){
 
 function setObRange(showAll){_obShowArchived=showAll;_obOpenId=null;loadOnboarding();}
 function toggleObCard(id){_obOpenId=(_obOpenId===id?null:id);_obActiveForm=null;renderOnboarding(_obCache);}
+function toggleObItemExpand(starterId,itemId){
+  const key=starterId+'|'+itemId;
+  if(_obExpandedItems.has(key)){
+    _obExpandedItems.delete(key);
+    if(_obActiveForm&&_obActiveForm.starterId===starterId&&_obActiveForm.itemId===itemId)_obActiveForm=null;
+  } else {
+    _obExpandedItems.add(key);
+  }
+  renderOnboarding(_obCache);
+}
 function toggleObForm(starterId,itemId,kind){
   _obActiveForm=(_obActiveForm&&_obActiveForm.starterId===starterId&&_obActiveForm.itemId===itemId)?null:{starterId,itemId,kind};
   renderOnboarding(_obCache);
