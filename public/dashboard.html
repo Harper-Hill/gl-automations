@@ -188,6 +188,38 @@ body{display:flex;flex-direction:column}
     .ob-actions button.danger{color:var(--red);border-color:#3a1e1c}
     .ob-empty{padding:24px;text-align:center;color:var(--faint);font-size:11px}
     .ob-gate{padding:16px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:11px;line-height:1.6}
+    .ob-email-row{display:flex;align-items:center;gap:8px;margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);flex-wrap:wrap}
+    .ob-email-row label{font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;white-space:nowrap}
+    .ob-email-row input{flex:1;min-width:160px;background:#111614;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px}
+    .ob-email-row input:focus{outline:none;border-color:var(--green)}
+    .ob-email-row button{background:none;border:1px solid var(--border);border-radius:4px;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;padding:5px 10px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+    .ob-email-row button:hover{color:var(--text)}
+    .ob-item-row{display:flex;flex-direction:column;gap:4px;padding:6px 0}
+    .ob-item-line{display:flex;align-items:flex-start;gap:8px}
+    .ob-item-extra{display:flex;align-items:center;gap:8px;margin-left:22px;flex-wrap:wrap}
+    .ob-upload-btn{background:none;border:1px dashed var(--border);border-radius:4px;color:var(--green-lt);font-family:'DM Mono',monospace;font-size:9px;padding:4px 9px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase}
+    .ob-upload-btn:hover{border-color:var(--green)}
+    .ob-upload-btn:disabled{opacity:.5;cursor:wait}
+    .ob-evidence-ok{font-size:9px;color:var(--green-lt);display:flex;align-items:center;gap:5px}
+    .ob-evidence-ok a{color:var(--green-lt);text-decoration:underline}
+    .ob-form-btn{background:none;border:1px dashed var(--border);border-radius:4px;color:var(--green-lt);font-family:'DM Mono',monospace;font-size:9px;padding:4px 9px;cursor:pointer;letter-spacing:.05em;text-transform:uppercase}
+    .ob-form-btn:hover{border-color:var(--green)}
+    .ob-form-done{font-size:9px;color:var(--green-lt);letter-spacing:.05em}
+    .ob-inline-form{background:#111614;border:1px solid var(--border);border-radius:6px;padding:12px;margin:8px 0 8px 22px}
+    .ob-inline-form .ob-form-row{margin-bottom:8px}
+    .ob-inline-form-row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-bottom:8px}
+    .ob-inline-form label{display:flex;flex-direction:column;gap:3px;font-size:9px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-bottom:8px}
+    .ob-inline-form input,.ob-inline-form select{background:#161a18;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px;width:100%}
+    .ob-inline-form input:focus,.ob-inline-form select:focus{outline:none;border-color:var(--green)}
+    .ob-inline-form-title{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green-lt);margin-bottom:10px}
+    .ob-inline-form-sub{font-size:10px;color:var(--dim);margin:10px 0 6px;letter-spacing:.05em;text-transform:uppercase}
+    .ob-inline-form-actions{display:flex;gap:6px;margin-top:10px}
+    .ob-nok-contact{border-top:1px solid var(--border);padding-top:8px;margin-top:8px}
+    .ob-nok-contact:first-child{border-top:none;padding-top:0;margin-top:0}
+    .ob-radio-row{display:flex;flex-direction:column;gap:6px;margin-bottom:10px;font-size:11px;color:var(--muted)}
+    .ob-radio-row .q{font-size:10px;color:var(--faint);margin-bottom:2px}
+    .ob-radio-opt{display:flex;align-items:center;gap:6px}
+    .ob-statement-result{font-size:10px;color:var(--green-lt);margin:6px 0 10px;padding:6px 8px;background:var(--green-dk);border-radius:4px}
 </style>
 </head>
 <body>
@@ -872,30 +904,30 @@ const OB_RESOURCES=[
 ];
 const OB_PHASES=[
   {key:"p1",part:"A",partLabel:"Part A — Statutory & company onboarding",title:"Phase 1 — Before day 1 (pre-boarding)",items:[
-    ["Right to work check completed and evidence copied/retained before the start date","statutory"],
-    ["Signed contract of employment / offer letter returned","statutory"],
-    ["HMRC Starter Checklist completed if no valid P45 supplied","statutory"],
-    ["Emergency contact / next of kin details collected","statutory"],
-    ["Bank details collected for payroll (Starling payroll run)","company"],
-    ["DVLA driving licence check completed if the role involves driving a company vehicle","statutory"],
-    ["DBS check considered if work will regularly take place on school grounds or around children","recommended"],
+    ["Right to work check completed and evidence copied/retained before the start date","statutory",{i:"Check original ID in person, via the Home Office's online share-code service, or an approved digital identity check — then keep dated copies. See gov.uk's right to work checks guide for the current accepted document lists.",u:true}],
+    ["Signed contract of employment / offer letter returned","statutory",{u:true}],
+    ["HMRC Starter Checklist completed if no valid P45 supplied","statutory",{i:"Needed when there's no valid P45 — it sets the new starter's tax code and student loan plan.",f:"hmrc",u:true}],
+    ["Emergency contact / next of kin details collected","statutory",{f:"nok"}],
+    ["Bank details collected for payroll (Starling payroll run)","company",{f:"bank"}],
+    ["DVLA driving licence check completed if the role involves driving a company vehicle","statutory",{i:"Ask for their driving licence check code (gov.uk 'View driving licence information') and confirm it covers the vehicle category before they drive for you.",u:true}],
+    ["DBS check considered if work will regularly take place on school grounds or around children","recommended",{i:"Only usually needed if the role means regular, supervised contact with children — e.g. mowing/spraying at a school during term time. Check gov.uk's DBS eligibility guidance if unsure."}],
     ["References requested and reviewed","recommended"],
     ["PPE sized and ordered: boots, gloves, hi-vis, waterproofs","statutory"],
     ["Uniform ordered","company"],
     ["Vehicle and equipment allocated and logged in Asset Tracker","company"],
     ["Site rota / job schedule set up in Jobber","company"],
-    ["Company email and Google Drive access created, with correct folder permissions","company"],
+    ["Company email and Google Drive access created, with correct folder permissions","company",{i:"Once it exists, add it in the Company email field at the top of this checklist so their Drive folder access can be granted."}],
     ["Harper Hill Dashboard / Notify login created","company"],
     ["Asset Tracker (DepotPro) login created and linked to the correct depot","company"],
     ["Staff salary workbook created in Google Sheets","company"]
   ]},
   {key:"p2",title:"Phase 2 — Day 1",items:[
     ["Welcome and introduction to the director and wider team","none"],
-    ["Written statement of employment particulars issued","statutory"],
-    ["Employers' liability insurance certificate reference shown to employee","statutory"],
+    ["Written statement of employment particulars issued","statutory",{i:"Legally required no later than day 1 — must cover pay, hours, holiday entitlement, notice periods and job title/duties at minimum.",u:true}],
+    ["Employers' liability insurance certificate reference shown to employee","statutory",{i:"Just show them where it's displayed/kept — by law it must be available to staff, with current cover of at least £5 million."}],
     ["Health & safety induction: hazards, welfare facilities, accident reporting, first aider location","statutory"],
     ["PPE issued, fitted, and correct use demonstrated","statutory"],
-    ["COSHH awareness: chemical/fuel storage, data sheet locations, safe handling","statutory"],
+    ["COSHH awareness: chemical/fuel storage, data sheet locations, safe handling","statutory",{i:"Point out where safety data sheets are kept for anything sprayed or handled, and how to read one."}],
     ["Manual handling briefing given","statutory"],
     ["Vehicle keys handed over; DVLA licence check confirmed before any driving","statutory"],
     ["Waste carrier licence procedures explained: green waste, chemical containers, general waste","statutory"],
@@ -910,20 +942,20 @@ const OB_PHASES=[
     ["Equality, diversity and anti-bullying policy overview given","statutory"]
   ]},
   {key:"p3",title:"Phase 3 — First week",items:[
-    ["PA1/PA6 pesticide certification status confirmed; supervised use only until certificated","statutory"],
+    ["PA1/PA6 pesticide certification status confirmed; supervised use only until certificated","statutory",{i:"PA1 (foundation) and PA6 (boom sprayer) certify someone to use pesticides unsupervised — supervised use only until they hold both.",u:true}],
     ["PA1/PA6 training booked if required and not already held","recommended"],
-    ["NPTC/LANTRA certification checked for powered equipment used; refresher booked if lapsed","statutory"],
+    ["NPTC/LANTRA certification checked for powered equipment used; refresher booked if lapsed","statutory",{u:true}],
     ["Shadowed an experienced team member on at least 2–3 jobs","recommended"],
     ["Reviewed risk assessments for typical job types (mowing, hedge cutting, spraying, roadside work)","statutory"],
-    ["Trailer towing entitlement confirmed if the role requires towing","statutory"],
+    ["Trailer towing entitlement confirmed if the role requires towing","statutory",{i:"Category B licences issued before 1 January 1997 usually cover this; later licences may need category BE — check gov.uk if unsure."}],
     ["HMRC Starter Checklist submitted to payroll; correct tax code confirmed on first payslip","statutory"],
-    ["Pension auto-enrolment assessment carried out; enrolment notice issued if eligible","statutory"]
+    ["Pension auto-enrolment assessment carried out; enrolment notice issued if eligible","statutory",{i:"Check current auto-enrolment earnings thresholds on gov.uk if you're not sure whether this employee qualifies."}]
   ]},
   {key:"p4",title:"Phase 4 — First month",items:[
     ["Probation review date set and communicated","recommended"],
-    ["All required certificates (PA1/PA6, chainsaw/NPTC, first aid if applicable) confirmed and filed","statutory"],
+    ["All required certificates (PA1/PA6, chainsaw/NPTC, first aid if applicable) confirmed and filed","statutory",{u:true}],
     ["1:1 systems check-in: confidence with Jobber, Asset Tracker, Dashboard, Google Drive","company"],
-    ["National Minimum/Living Wage compliance confirmed for the employee's age band","statutory"],
+    ["National Minimum/Living Wage compliance confirmed for the employee's age band","statutory",{i:"Rates change every April — check the current National Minimum/Living Wage rate for this employee's age band on gov.uk before their first payslip."}],
     ["Signed checklist filed in the employee's HR record","company"]
   ]},
   {key:"p5",part:"B",partLabel:"Part B — Practical skills & equipment induction",title:"Jobber — day-to-day use",items:[
@@ -983,9 +1015,9 @@ const OB_PHASES=[
 ];
 let OB_TOTAL=0;
 OB_PHASES.forEach(phase=>{
-  phase.items=phase.items.map((it,i)=>{OB_TOTAL++;return{id:phase.key+'-'+i,text:it[0],tag:it[1]};});
+  phase.items=phase.items.map((it,i)=>{OB_TOTAL++;return{id:phase.key+'-'+i,text:it[0],tag:it[1],meta:it[2]||{}};});
 });
-let _obShowArchived=false, _obOpenId=null, _obCache=null;
+let _obShowArchived=false, _obOpenId=null, _obCache=null, _obActiveForm=null;
 function obTag(tag){
   if(tag==='none'||!tag)return '';
   const label=tag==='statutory'?'Statutory':tag==='recommended'?'Recommended':'Company system';
@@ -1075,16 +1107,56 @@ function renderOnboarding(data){
 
       if(isOpen){
         html+='<div class="ob-body">';
+        html+=`<div class="ob-email-row">
+          <label>Company email</label>
+          <input type="email" id="ob-email-${s.id}" value="${escHtml(s.email||'')}" placeholder="once their Harper Hill email exists" ${signedIn?'':'disabled'}>
+          ${signedIn?`<button onclick="submitObEmail('${s.id}',${s.rowIndex})">Save</button>`:''}
+          ${s.driveFolderUrl?`<a href="${s.driveFolderUrl}" target="_blank" rel="noopener" style="font-size:9px;color:var(--green-lt)">Open Drive folder</a>`:'<span style="font-size:9px;color:var(--faint)">Drive folder not set up yet</span>'}
+        </div>`;
         OB_PHASES.forEach(phase=>{
           if(phase.partLabel)html+=`<div class="ob-part">${escHtml(phase.partLabel)}</div>`;
           const pChecked=phase.items.filter(it=>checks[it.id]).length;
           html+=`<div class="ob-phase-head"><span>${escHtml(phase.title)}</span><span>${pChecked}/${phase.items.length}</span></div>`;
           phase.items.forEach(it=>{
             const isChecked=!!checks[it.id];
-            html+=`<label class="ob-item${isChecked?' checked':''}">
-              <input type="checkbox" ${isChecked?'checked':''} ${signedIn?'':'disabled'} onchange="toggleObCheck('${s.id}',${s.rowIndex},'${it.id}',this.checked)">
-              <span>${escHtml(it.text)}${obTag(it.tag)}</span>
-            </label>`;
+            const meta=it.meta||{};
+            html+=`<div class="ob-item-row">
+              <label class="ob-item${isChecked?' checked':''} ob-item-line">
+                <input type="checkbox" ${isChecked?'checked':''} ${signedIn?'':'disabled'} onchange="toggleObCheck('${s.id}',${s.rowIndex},'${it.id}',this.checked)">
+                <span>${escHtml(it.text)}${obTag(it.tag)}${meta.i?ib(meta.i):''}</span>
+              </label>`;
+
+            if(meta.u){
+              const ev=s.evidence&&s.evidence[it.id];
+              html+='<div class="ob-item-extra">';
+              if(ev){
+                html+=`<span class="ob-evidence-ok">Uploaded — <a href="${ev.webViewLink||'#'}" target="_blank" rel="noopener">${escHtml(ev.name||'file')}</a></span>`;
+                if(signedIn)html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Replace</button>`;
+              } else if(signedIn){
+                html+=`<button class="ob-upload-btn" onclick="pickObEvidence('${s.id}',${s.rowIndex},'${it.id}')">Upload / photo</button>`;
+              }
+              html+='</div>';
+            }
+
+            if(meta.f){
+              const isFormOpen=_obActiveForm&&_obActiveForm.starterId===s.id&&_obActiveForm.itemId===it.id;
+              html+='<div class="ob-item-extra">';
+              if(meta.f==='nok'){
+                const n=(s.nextOfKin||[]).length;
+                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','nok')">${n?'Edit next of kin ('+n+')':'Add next of kin'}</button>`;
+                if(!isFormOpen&&n)html+=`<span class="ob-form-done">${(s.nextOfKin||[]).map(c=>escHtml(c.name)).join(', ')}</span>`;
+              } else if(meta.f==='hmrc'){
+                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','hmrc')">${s.hmrcStatus==='saved'?'Edit HMRC checklist':'Fill in HMRC checklist'}</button>`;
+                if(s.hmrcStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
+              } else if(meta.f==='bank'){
+                if(signedIn)html+=`<button class="ob-form-btn" onclick="toggleObForm('${s.id}','${it.id}','bank')">${s.bankStatus==='saved'?'Edit bank details':'Add bank details'}</button>`;
+                if(s.bankStatus==='saved')html+='<span class="ob-form-done">Saved — stored in their Drive folder</span>';
+              }
+              html+='</div>';
+              if(isFormOpen)html+=renderObInlineForm(s,it,meta.f);
+            }
+
+            html+='</div>';
           });
         });
         html+='<div class="ob-links"><div class="ob-phase-head"><span>Recommended viewing</span></div>';
@@ -1109,7 +1181,306 @@ function renderOnboarding(data){
 }
 
 function setObRange(showAll){_obShowArchived=showAll;_obOpenId=null;loadOnboarding();}
-function toggleObCard(id){_obOpenId=(_obOpenId===id?null:id);renderOnboarding(_obCache);}
+function toggleObCard(id){_obOpenId=(_obOpenId===id?null:id);_obActiveForm=null;renderOnboarding(_obCache);}
+function toggleObForm(starterId,itemId,kind){
+  _obActiveForm=(_obActiveForm&&_obActiveForm.starterId===starterId&&_obActiveForm.itemId===itemId)?null:{starterId,itemId,kind};
+  renderOnboarding(_obCache);
+}
+
+function renderObInlineForm(s,it,kind){
+  if(kind==='nok'){
+    const contacts=(s.nextOfKin&&s.nextOfKin.length?s.nextOfKin.slice(0,3):[]);
+    while(contacts.length<3)contacts.push({});
+    let out='<div class="ob-inline-form"><div class="ob-inline-form-title">Next of kin / emergency contacts (up to 3)</div>';
+    contacts.forEach((c,i)=>{
+      out+=`<div class="ob-nok-contact">
+        <div class="ob-form-row">
+          <label>Name<input type="text" id="ob-nok-name-${i}" value="${escHtml(c.name||'')}"></label>
+          <label>Relationship<input type="text" id="ob-nok-rel-${i}" value="${escHtml(c.relationship||'')}" placeholder="e.g. Partner, Parent"></label>
+        </div>
+        <div class="ob-form-row">
+          <label>Phone<input type="tel" id="ob-nok-phone-${i}" value="${escHtml(c.phone||'')}"></label>
+          <label>Email<input type="email" id="ob-nok-email-${i}" value="${escHtml(c.email||'')}"></label>
+        </div>
+      </div>`;
+    });
+    out+=`<div class="ob-inline-form-actions">
+      <button class="ob-submit" onclick="submitObNextOfKin('${s.id}',${s.rowIndex})">Save</button>
+      <button class="ob-upload-btn" onclick="toggleObForm('${s.id}','${it.id}','nok')">Cancel</button>
+    </div></div>`;
+    return out;
+  }
+
+  if(kind==='bank'){
+    return `<div class="ob-inline-form">
+      <div class="ob-inline-form-title">Bank details for payroll</div>
+      <div class="ob-form-row">
+        <label>Account name<input type="text" id="ob-bank-accountName"></label>
+        <label>Bank name<input type="text" id="ob-bank-bankName"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Sort code<input type="text" id="ob-bank-sortCode" placeholder="00-00-00"></label>
+        <label>Account number<input type="text" id="ob-bank-accountNumber"></label>
+      </div>
+      <div class="ob-inline-form-sub">These aren't shown back here once saved — they're stored only in this employee's restricted Drive folder.</div>
+      <div class="ob-inline-form-actions">
+        <button class="ob-submit" onclick="submitObBank('${s.id}',${s.rowIndex})">Save</button>
+        <button class="ob-upload-btn" onclick="toggleObForm('${s.id}','${it.id}','bank')">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  if(kind==='hmrc'){
+    const nameParts=(s.name||'').trim().split(/\s+/);
+    const guessFirst=nameParts.slice(0,-1).join(' ');
+    const guessLast=nameParts.slice(-1).join('');
+    return `<div class="ob-inline-form">
+      <div class="ob-inline-form-title">HMRC Starter Checklist</div>
+      <div class="ob-form-row">
+        <label>First name(s)<input type="text" id="ob-hmrc-firstName" value="${escHtml(guessFirst)}"></label>
+        <label>Last name<input type="text" id="ob-hmrc-lastName" value="${escHtml(guessLast)}"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Sex<select id="ob-hmrc-sex"><option value="">—</option><option value="Male">Male</option><option value="Female">Female</option></select></label>
+        <label>Date of birth<input type="date" id="ob-hmrc-dob"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Home address<input type="text" id="ob-hmrc-address"></label>
+        <label>Postcode<input type="text" id="ob-hmrc-postcode"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Country<input type="text" id="ob-hmrc-country" value="United Kingdom"></label>
+        <label>National Insurance number<input type="text" id="ob-hmrc-ni" placeholder="if known"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Employment start date<input type="date" id="ob-hmrc-startDate" value="${escHtml(s.startDate||'')}"></label>
+        <label style="visibility:hidden">spacer<input type="text"></label>
+      </div>
+
+      <div class="ob-inline-form-sub">Tax code statement</div>
+      <div class="ob-radio-row">
+        <div class="q">Do they have another job?</div>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q8" value="Yes" onchange="obUpdateHmrcPreview()">Yes</label>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q8" value="No" onchange="obUpdateHmrcPreview()" checked>No</label>
+      </div>
+      <div class="ob-radio-row">
+        <div class="q">Do they get a State, workplace or private pension?</div>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q9" value="Yes" onchange="obUpdateHmrcPreview()">Yes</label>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q9" value="No" onchange="obUpdateHmrcPreview()" checked>No</label>
+      </div>
+      <div class="ob-radio-row">
+        <div class="q">Since 6 April, have they had another job that's since ended, or received Jobseeker's/ESA/Incapacity Benefit?</div>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q10" value="Yes" onchange="obUpdateHmrcPreview()">Yes</label>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-q10" value="No" onchange="obUpdateHmrcPreview()" checked>No</label>
+      </div>
+      <div class="ob-statement-result" id="ob-hmrc-statement-preview">Tax code statement: A</div>
+
+      <div class="ob-inline-form-sub">Student / postgraduate loan</div>
+      <div class="ob-radio-row">
+        <div class="q">Do they have a student or postgraduate loan?</div>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-loan" value="Yes">Yes</label>
+        <label class="ob-radio-opt"><input type="radio" name="ob-hmrc-loan" value="No" checked>No</label>
+      </div>
+      <div class="ob-form-row">
+        <label>Loan plan (if yes)<select id="ob-hmrc-loanPlan"><option value="">—</option><option>Plan 1</option><option>Plan 2</option><option>Plan 4</option><option>Plan 5</option><option>Postgraduate loan</option></select></label>
+        <label style="visibility:hidden">spacer<input type="text"></label>
+      </div>
+
+      <div class="ob-inline-form-sub">Declaration</div>
+      <div class="ob-form-row">
+        <label>Full name<input type="text" id="ob-hmrc-declaredName" value="${escHtml(s.name||'')}"></label>
+        <label>Date<input type="date" id="ob-hmrc-declaredDate" value="${new Date().toISOString().slice(0,10)}"></label>
+      </div>
+
+      <div class="ob-inline-form-sub">These answers aren't shown back here once saved — they're stored only in this employee's restricted Drive folder, matching what HMRC's own Starter Checklist collects.</div>
+      <div class="ob-inline-form-actions">
+        <button class="ob-submit" onclick="submitObHmrc('${s.id}',${s.rowIndex})">Save</button>
+        <button class="ob-upload-btn" onclick="toggleObForm('${s.id}','${it.id}','hmrc')">Cancel</button>
+      </div>
+    </div>`;
+  }
+
+  return '';
+}
+
+function obUpdateHmrcPreview(){
+  const q8=document.querySelector('input[name="ob-hmrc-q8"]:checked');
+  const q9=document.querySelector('input[name="ob-hmrc-q9"]:checked');
+  const q10=document.querySelector('input[name="ob-hmrc-q10"]:checked');
+  let statement='A';
+  if(q8&&q8.value==='Yes')statement='C';
+  else if(q9&&q9.value==='Yes')statement='C';
+  else if(q10&&q10.value==='Yes')statement='B';
+  const out=document.getElementById('ob-hmrc-statement-preview');
+  if(out)out.textContent='Tax code statement: '+statement;
+}
+
+async function submitObEmail(id,rowIndex){
+  const input=document.getElementById('ob-email-'+id);
+  const email=input?input.value.trim():'';
+  try{
+    const res=await fetch('/.netlify/functions/onboarding?op=email',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,email})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){const s=(_obCache.items||[]).find(x=>x.id===id);if(s)s.email=email;}
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function submitObNextOfKin(id,rowIndex){
+  const contacts=[];
+  for(let i=0;i<3;i++){
+    const nameEl=document.getElementById('ob-nok-name-'+i);
+    const name=nameEl?nameEl.value.trim():'';
+    if(!name)continue;
+    contacts.push({
+      name,
+      relationship:(document.getElementById('ob-nok-rel-'+i)||{}).value||'',
+      phone:(document.getElementById('ob-nok-phone-'+i)||{}).value||'',
+      email:(document.getElementById('ob-nok-email-'+i)||{}).value||''
+    });
+  }
+  try{
+    const res=await fetch('/.netlify/functions/onboarding?op=nextOfKin',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,contacts})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){const s=(_obCache.items||[]).find(x=>x.id===id);if(s)s.nextOfKin=data.contacts;}
+    _obActiveForm=null;
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function submitObHmrc(id,rowIndex){
+  const v=fid=>{const el=document.getElementById(fid);return el?el.value:'';};
+  const q8=document.querySelector('input[name="ob-hmrc-q8"]:checked');
+  const q9=document.querySelector('input[name="ob-hmrc-q9"]:checked');
+  const q10=document.querySelector('input[name="ob-hmrc-q10"]:checked');
+  const hasLoan=document.querySelector('input[name="ob-hmrc-loan"]:checked');
+  let statement='A';
+  if(q8&&q8.value==='Yes')statement='C';
+  else if(q9&&q9.value==='Yes')statement='C';
+  else if(q10&&q10.value==='Yes')statement='B';
+  const answers={
+    firstName:v('ob-hmrc-firstName'), lastName:v('ob-hmrc-lastName'), sex:v('ob-hmrc-sex'),
+    dob:v('ob-hmrc-dob'), address:v('ob-hmrc-address'), postcode:v('ob-hmrc-postcode'),
+    country:v('ob-hmrc-country'), niNumber:v('ob-hmrc-ni'), startDate:v('ob-hmrc-startDate'),
+    hasOtherJob:q8?q8.value:'', hasPension:q9?q9.value:'', sinceApril:q10?q10.value:'',
+    statement, hasLoan:hasLoan?hasLoan.value:'', loanPlan:v('ob-hmrc-loanPlan'),
+    declaredName:v('ob-hmrc-declaredName'), declaredDate:v('ob-hmrc-declaredDate')
+  };
+  try{
+    const res=await fetch('/.netlify/functions/onboarding?op=hmrc',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,answers})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){const s=(_obCache.items||[]).find(x=>x.id===id);if(s)s.hmrcStatus='saved';}
+    _obActiveForm=null;
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function submitObBank(id,rowIndex){
+  const v=fid=>{const el=document.getElementById(fid);return el?el.value:'';};
+  const bank={accountName:v('ob-bank-accountName'),bankName:v('ob-bank-bankName'),sortCode:v('ob-bank-sortCode'),accountNumber:v('ob-bank-accountNumber')};
+  try{
+    const res=await fetch('/.netlify/functions/onboarding?op=bank',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,bank})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){const s=(_obCache.items||[]).find(x=>x.id===id);if(s)s.bankStatus='saved';}
+    _obActiveForm=null;
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// ── Evidence upload / take-photo ────────────────────────────────
+// Images are downscaled and re-compressed client-side before upload so a
+// phone camera photo doesn't blow past the function's request-size limit.
+let _obFileInput=null, _obFileTarget=null;
+function pickObEvidence(starterId,rowIndex,itemId){
+  if(!_obFileInput){
+    _obFileInput=document.createElement('input');
+    _obFileInput.type='file';
+    _obFileInput.accept='image/*,application/pdf';
+    _obFileInput.style.display='none';
+    _obFileInput.addEventListener('change',onObFileChosen);
+    document.body.appendChild(_obFileInput);
+  }
+  _obFileTarget={starterId,rowIndex,itemId};
+  _obFileInput.value='';
+  _obFileInput.click();
+}
+
+function fileToBase64(file){
+  return new Promise((resolve,reject)=>{
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result.split(',')[1]);
+    r.onerror=reject;
+    r.readAsDataURL(file);
+  });
+}
+
+function compressImageToBase64(file,maxDim,quality){
+  return new Promise((resolve,reject)=>{
+    const img=new Image();
+    const url=URL.createObjectURL(file);
+    img.onload=()=>{
+      let w=img.width,h=img.height;
+      if(w>=h&&w>maxDim){h=Math.round(h*maxDim/w);w=maxDim;}
+      else if(h>w&&h>maxDim){w=Math.round(w*maxDim/h);h=maxDim;}
+      const canvas=document.createElement('canvas');
+      canvas.width=w;canvas.height=h;
+      canvas.getContext('2d').drawImage(img,0,0,w,h);
+      URL.revokeObjectURL(url);
+      resolve(canvas.toDataURL('image/jpeg',quality).split(',')[1]);
+    };
+    img.onerror=reject;
+    img.src=url;
+  });
+}
+
+async function onObFileChosen(e){
+  const file=e.target.files&&e.target.files[0];
+  if(!file||!_obFileTarget)return;
+  const {starterId,rowIndex,itemId}=_obFileTarget;
+  try{
+    let mimeType=file.type||'application/octet-stream';
+    let base64;
+    if(mimeType.startsWith('image/')){
+      base64=await compressImageToBase64(file,1600,0.82);
+      mimeType='image/jpeg';
+    } else {
+      if(file.size>8*1024*1024){alert('File is larger than 8MB — please choose a smaller file.');return;}
+      base64=await fileToBase64(file);
+    }
+    const res=await fetch('/.netlify/functions/onboarding?op=upload',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id:starterId,rowIndex,itemId,filename:file.name,mimeType,dataBase64:base64})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){
+      const s=(_obCache.items||[]).find(x=>x.id===starterId);
+      if(s){s.evidence=s.evidence||{};s.evidence[itemId]=data.evidence;}
+    }
+    renderOnboarding(_obCache);
+  }catch(err){alert('Upload failed: '+err.message);}
+}
 
 async function submitStarter(){
   const name=document.getElementById('ob-name').value.trim();
