@@ -141,6 +141,53 @@ body{display:flex;flex-direction:column}
     .nf-row-actions button.danger{color:var(--red);border-color:#3a1e1c}
     .nf-empty{padding:24px;text-align:center;color:var(--faint);font-size:11px}
     .nf-gate{padding:16px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:11px;line-height:1.6}
+    /* Onboarding (Starters) tab */
+    .ob-form{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:14px;margin-bottom:14px}
+    .ob-form-row{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+    .ob-form-row label{display:flex;flex-direction:column;gap:4px;font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase}
+    .ob-form-row input,.ob-form-row select{background:#111614;border:1px solid var(--border);border-radius:4px;color:var(--text);font-family:'DM Mono',monospace;font-size:11px;padding:6px 8px}
+    .ob-form-row input:focus,.ob-form-row select:focus{outline:none;border-color:var(--green)}
+    .ob-submit{background:var(--green);border:none;border-radius:4px;color:#fff;font-family:'DM Mono',monospace;font-size:11px;padding:8px 14px;cursor:pointer;letter-spacing:.1em;text-transform:uppercase}
+    .ob-submit:disabled{background:var(--faint);cursor:not-allowed}
+    .ob-submit:active:not(:disabled){background:var(--green-lt)}
+    .ob-msg{font-size:10px;color:var(--green-lt);margin-top:8px;display:none}
+    .ob-msg.err{color:var(--red)}
+    .ob-msg.on{display:block}
+    .ob-toggle{display:flex;background:#1e2420;border-radius:6px;padding:2px;gap:2px;margin-bottom:12px;width:fit-content}
+    .ob-toggle button{font-family:'DM Mono',monospace;font-size:10px;padding:4px 12px;border:none;border-radius:4px;cursor:pointer;background:transparent;color:var(--faint);transition:all .15s}
+    .ob-toggle button.active{background:var(--green);color:#fff}
+    .ob-card{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;margin-bottom:8px;font-size:11px}
+    .ob-card-top{display:flex;align-items:center;gap:10px;cursor:pointer}
+    .ob-avatar{width:28px;height:28px;border-radius:50%;background:var(--green-dk);color:var(--green-lt);display:flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;flex-shrink:0}
+    .ob-card-meta{flex:1;min-width:0}
+    .ob-card-name{color:var(--text);font-weight:500;display:flex;align-items:center;gap:6px}
+    .ob-card-sub{font-size:9px;color:var(--dim);letter-spacing:.04em;margin-top:2px;display:flex;gap:8px;flex-wrap:wrap}
+    .ob-card-prog{font-size:10px;color:var(--muted);white-space:nowrap;text-align:right;flex-shrink:0}
+    .ob-bar{margin-top:4px;background:#1e2420;border-radius:2px;height:3px;width:56px}
+    .ob-bar-fill{background:var(--green);height:3px;border-radius:2px;transition:width .3s}
+    .ob-bar-fill.done{background:var(--green-lt)}
+    .ob-chevron{width:14px;height:14px;color:var(--faint);flex-shrink:0;transition:transform .15s}
+    .ob-card.open .ob-chevron{transform:rotate(90deg)}
+    .ob-body{display:none;margin-top:12px;padding-top:12px;border-top:1px solid var(--border)}
+    .ob-card.open .ob-body{display:block}
+    .ob-part{font-size:9px;letter-spacing:.15em;text-transform:uppercase;color:var(--green-lt);margin:12px 0 6px;padding-top:8px;border-top:1px solid var(--border)}
+    .ob-part:first-child{margin-top:0;padding-top:0;border-top:none}
+    .ob-phase-head{display:flex;justify-content:space-between;font-size:10px;color:var(--muted);margin-bottom:4px}
+    .ob-item{display:flex;align-items:flex-start;gap:8px;padding:5px 0;font-size:11px;color:var(--muted);line-height:1.4}
+    .ob-item.checked{color:var(--dim);text-decoration:line-through}
+    .ob-item input{margin-top:2px;flex-shrink:0;accent-color:var(--green)}
+    .ob-tag{font-size:8px;padding:1px 5px;border-radius:3px;background:#1e2420;color:var(--dim);letter-spacing:.05em;margin-left:6px;white-space:nowrap}
+    .ob-tag.statutory{background:var(--red-dk);color:var(--red)}
+    .ob-tag.recommended{background:#1a2e1e;color:var(--green-lt)}
+    .ob-links{margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .ob-links a{display:block;font-size:10px;color:var(--green-lt);margin-bottom:5px;text-decoration:none}
+    .ob-links a:hover{text-decoration:underline}
+    .ob-actions{display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+    .ob-actions button{background:none;border:1px solid var(--border);border-radius:4px;color:var(--faint);font-family:'DM Mono',monospace;font-size:9px;padding:4px 8px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
+    .ob-actions button:hover{color:var(--text)}
+    .ob-actions button.danger{color:var(--red);border-color:#3a1e1c}
+    .ob-empty{padding:24px;text-align:center;color:var(--faint);font-size:11px}
+    .ob-gate{padding:16px;text-align:center;background:var(--surface);border:1px dashed var(--border);border-radius:8px;color:var(--muted);font-size:11px;line-height:1.6}
 </style>
 </head>
 <body>
@@ -178,6 +225,7 @@ body{display:flex;flex-direction:column}
   <div class="section" id="sec-goals"><div id="goals-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-hours"><div id="hours-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
     <div class="section" id="sec-notifs"><div id="notifs-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+    <div class="section" id="sec-onboarding"><div id="onboarding-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   </div>
 <nav class="bnav">
   <button class="bnav-btn active" id="btn-overview" onclick="switchTab('overview')">
@@ -203,6 +251,10 @@ body{display:flex;flex-direction:column}
     <button class="bnav-btn" id="btn-notifs" onclick="switchTab('notifs')">
       <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M5 8a5 5 0 0 1 10 0v4l1.5 2H3.5L5 12V8z"/><path d="M8 16a2 2 0 0 0 4 0"/></svg>
       Notify
+    </button>
+    <button class="bnav-btn" id="btn-onboarding" onclick="switchTab('onboarding')">
+      <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4" y="3" width="12" height="15" rx="1.5"/><path d="M7 8h6M7 11h6M7 14h4"/></svg>
+      Starters
     </button>
   </nav>
 <script>
@@ -813,11 +865,330 @@ async function editNotif(id,rowIndex){
   }catch(e){alert('Error: '+e.message);}
 }
 
-// Wire up: load notifications when the tab is opened
+// ── ONBOARDING (STARTERS) ───────────────────────────────────────
+const OB_RESOURCES=[
+  ["What I've Learned from 20 Years as a Builder","https://www.youtube.com/watch?v=qcFx35eTN-c"],
+  ["How Costco Mastered Capitalism Without Being Greedy","https://youtu.be/KxELxC8TWKg?si=gzUO0sTADmPQUW-K"]
+];
+const OB_PHASES=[
+  {key:"p1",part:"A",partLabel:"Part A — Statutory & company onboarding",title:"Phase 1 — Before day 1 (pre-boarding)",items:[
+    ["Right to work check completed and evidence copied/retained before the start date","statutory"],
+    ["Signed contract of employment / offer letter returned","statutory"],
+    ["HMRC Starter Checklist completed if no valid P45 supplied","statutory"],
+    ["Emergency contact / next of kin details collected","statutory"],
+    ["Bank details collected for payroll (Starling payroll run)","company"],
+    ["DVLA driving licence check completed if the role involves driving a company vehicle","statutory"],
+    ["DBS check considered if work will regularly take place on school grounds or around children","recommended"],
+    ["References requested and reviewed","recommended"],
+    ["PPE sized and ordered: boots, gloves, hi-vis, waterproofs","statutory"],
+    ["Uniform ordered","company"],
+    ["Vehicle and equipment allocated and logged in Asset Tracker","company"],
+    ["Site rota / job schedule set up in Jobber","company"],
+    ["Company email and Google Drive access created, with correct folder permissions","company"],
+    ["Harper Hill Dashboard / Notify login created","company"],
+    ["Asset Tracker (DepotPro) login created and linked to the correct depot","company"],
+    ["Staff salary workbook created in Google Sheets","company"]
+  ]},
+  {key:"p2",title:"Phase 2 — Day 1",items:[
+    ["Welcome and introduction to the director and wider team","none"],
+    ["Written statement of employment particulars issued","statutory"],
+    ["Employers' liability insurance certificate reference shown to employee","statutory"],
+    ["Health & safety induction: hazards, welfare facilities, accident reporting, first aider location","statutory"],
+    ["PPE issued, fitted, and correct use demonstrated","statutory"],
+    ["COSHH awareness: chemical/fuel storage, data sheet locations, safe handling","statutory"],
+    ["Manual handling briefing given","statutory"],
+    ["Vehicle keys handed over; DVLA licence check confirmed before any driving","statutory"],
+    ["Waste carrier licence procedures explained: green waste, chemical containers, general waste","statutory"],
+    ["Jobber app walkthrough: job sheets, start/finish tasks, Next Visit instructions","company"],
+    ["Harper Hill Dashboard / Notify tab walkthrough: briefings, task read receipts","company"],
+    ["Google Drive folder structure and access permissions shown","company"],
+    ["Asset Tracker walkthrough: equipment condition, maintenance notes, fuel and mileage","company"],
+    ["Working hours, breaks and lone-working procedure explained","statutory"],
+    ["Pay day, payslip access and mileage claim process explained","company"],
+    ["Data protection: how personal data is used and stored, privacy notice given","statutory"],
+    ["Emergency procedures explained: fire, accident, nearest A&E for common sites","statutory"],
+    ["Equality, diversity and anti-bullying policy overview given","statutory"]
+  ]},
+  {key:"p3",title:"Phase 3 — First week",items:[
+    ["PA1/PA6 pesticide certification status confirmed; supervised use only until certificated","statutory"],
+    ["PA1/PA6 training booked if required and not already held","recommended"],
+    ["NPTC/LANTRA certification checked for powered equipment used; refresher booked if lapsed","statutory"],
+    ["Shadowed an experienced team member on at least 2–3 jobs","recommended"],
+    ["Reviewed risk assessments for typical job types (mowing, hedge cutting, spraying, roadside work)","statutory"],
+    ["Trailer towing entitlement confirmed if the role requires towing","statutory"],
+    ["HMRC Starter Checklist submitted to payroll; correct tax code confirmed on first payslip","statutory"],
+    ["Pension auto-enrolment assessment carried out; enrolment notice issued if eligible","statutory"]
+  ]},
+  {key:"p4",title:"Phase 4 — First month",items:[
+    ["Probation review date set and communicated","recommended"],
+    ["All required certificates (PA1/PA6, chainsaw/NPTC, first aid if applicable) confirmed and filed","statutory"],
+    ["1:1 systems check-in: confidence with Jobber, Asset Tracker, Dashboard, Google Drive","company"],
+    ["National Minimum/Living Wage compliance confirmed for the employee's age band","statutory"],
+    ["Signed checklist filed in the employee's HR record","company"]
+  ]},
+  {key:"p5",part:"B",partLabel:"Part B — Practical skills & equipment induction",title:"Jobber — day-to-day use",items:[
+    ["Add line items and invoice a job — for spraying, remember it's priced as a percentage/decimal using 8 litres as the base measurement","company"],
+    ["Edit job instructions","company"],
+    ["Text a client directly from a job","company"],
+    ["Track time on a job","company"],
+    ["Upload job photos to Google Drive","company"],
+    ["Update the admin and maintenance lists","company"],
+    ["Pull up job directions","company"],
+    ["View previous job notes","company"],
+    ["Add notes to a job","company"]
+  ]},
+  {key:"p6",title:"Van",items:[
+    ["Location of petty cash and the diesel card, and correct use of both","company"],
+    ["Locations of the first aid kit, fire extinguisher and accident book","statutory"],
+    ["Locations of wipes and other personal cleaning items","company"],
+    ["Correct lashing of roof cargo (ladders especially), including proper use of bungees and toe clip straps","company"],
+    ["Never lean tools against the van","company"],
+    ["How to properly start the van","company"],
+    ["How to check tyre pressures and inflate them (workshop air compressor)","company"],
+    ["Correct storage of equipment: wall hooks, long tool rack, buckets, cubby holes, etc.","company"],
+    ["Correct cargo layout on full-van days: frequently used items nearest the doors, small ladder storage, planning for anything left behind","company"],
+    ["End-of-day procedure: waste, batteries, prep for the next day","company"],
+    ["Informed about the GPS vehicle tracker","statutory"],
+    ["Locations of PPE in the van: glasses, gloves and glove etiquette, ear defenders, etc.","statutory"]
+  ]},
+  {key:"p7",title:"Trailer",items:[
+    ["Correct attachment to the vehicle","company"],
+    ["Correct lashing of cargo","company"],
+    ["How to securely lock the gates","company"],
+    ["Correct weight distribution","company"],
+    ["Don't step on the mudguards","company"],
+    ["How to help back up a trailer, staying in sight of the mirrors at all times","company"]
+  ]},
+  {key:"p8",title:"Machines & equipment",items:[
+    ["How to sharpen and tighten a chainsaw and pole saw","company"],
+    ["Etesia push mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
+    ["Honda-powered equipment: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
+    ["Scarifier: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
+    ["Ride-on mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
+    ["How to store and secure ladders","company"],
+    ["How to sharpen secateurs","company"],
+    ["How to clean secateurs, loppers and shears","company"],
+    ["How to start and use the ride-on mower","company"],
+    ["How to use secateurs, loppers and shears","company"],
+    ["How to sharpen mower blades","company"],
+    ["How and when to clean hedgetrimmer blades","company"],
+    ["How to use the edger","company"],
+    ["How to change the strimmer head and line","company"],
+    ["Correct use of ladders: three points of contact, etc.","statutory"]
+  ]},
+  {key:"p9",title:"Base",items:[
+    ["What's stored where","company"],
+    ["What the various areas of the base are called","company"]
+  ]}
+];
+let OB_TOTAL=0;
+OB_PHASES.forEach(phase=>{
+  phase.items=phase.items.map((it,i)=>{OB_TOTAL++;return{id:phase.key+'-'+i,text:it[0],tag:it[1]};});
+});
+let _obShowArchived=false, _obOpenId=null, _obCache=null;
+function obTag(tag){
+  if(tag==='none'||!tag)return '';
+  const label=tag==='statutory'?'Statutory':tag==='recommended'?'Recommended':'Company system';
+  return `<span class="ob-tag ${tag}">${label}</span>`;
+}
+function obInitials(name){
+  const parts=String(name||'').trim().split(/\s+/);
+  let s=(parts[0]||'')[0]||'?';
+  if(parts.length>1)s+=parts[parts.length-1][0];
+  return s.toUpperCase();
+}
+function obCountChecked(checks){
+  checks=checks||{};
+  let n=0;
+  OB_PHASES.forEach(phase=>{phase.items.forEach(it=>{if(checks[it.id])n++;});});
+  return n;
+}
+
+async function loadOnboarding(){
+  const c=document.getElementById('onboarding-content');
+  c.innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
+  try{
+    const url='/.netlify/functions/onboarding'+(_obShowArchived?'?includeArchived=1':'');
+    const res=await fetch(url);
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    _obCache=data;
+    renderOnboarding(data);
+  }catch(e){
+    c.innerHTML='<div class="loading" style="color:var(--red)">Error: '+e.message+'</div>';
+  }
+}
+
+function renderOnboarding(data){
+  const c=document.getElementById('onboarding-content');
+  const dir=isDirector(_user);
+  const signedIn=!!_user;
+  const items=(data&&data.items)||[];
+  let html='<div class="slabel">New Starters</div>';
+
+  if(signedIn){
+    html+=`<div class="ob-form">
+      <div class="ob-form-row">
+        <label>Name<input type="text" id="ob-name" placeholder="Full name"></label>
+        <label>Role<input type="text" id="ob-role" value="Grounds Operative"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Start date<input type="date" id="ob-start"></label>
+        <label>Manager<input type="text" id="ob-manager" placeholder="Reporting to"></label>
+      </div>
+      <div class="ob-form-row">
+        <label>Depot<input type="text" id="ob-depot" placeholder="Base / depot"></label>
+        <label style="visibility:hidden">spacer<input type="text"></label>
+      </div>
+      <button class="ob-submit" id="ob-submit" onclick="submitStarter()">Add Starter</button>
+      <div class="ob-msg" id="ob-msg"></div>
+    </div>`;
+  } else {
+    html+='<div class="ob-gate">Sign in (top right) to add or update a starter.</div>';
+  }
+
+  html+=`<div class="ob-toggle">
+    <button class="${_obShowArchived?'':'active'}" onclick="setObRange(false)">Active</button>
+    <button class="${_obShowArchived?'active':''}" onclick="setObRange(true)">Show completed</button>
+  </div>`;
+
+  if(items.length===0){
+    html+='<div class="ob-empty">No starters yet.</div>';
+  } else {
+    items.forEach(s=>{
+      const checks=s.checks||{};
+      const checked=obCountChecked(checks);
+      const pct=OB_TOTAL?Math.round((checked/OB_TOTAL)*100):0;
+      const isOpen=s.id===_obOpenId;
+      html+=`<div class="ob-card${isOpen?' open':''}">
+        <div class="ob-card-top" onclick="toggleObCard('${s.id}')">
+          <div class="ob-avatar">${obInitials(s.name)}</div>
+          <div class="ob-card-meta">
+            <div class="ob-card-name">${escHtml(s.name||'Unnamed')}${s.archived?'<span class="ob-tag">Complete</span>':''}</div>
+            <div class="ob-card-sub"><span>${escHtml(s.role||'Grounds Operative')}</span><span>starts ${fmtDate(s.startDate)}</span>${s.depot?`<span>${escHtml(s.depot)}</span>`:''}</div>
+          </div>
+          <div class="ob-card-prog">${checked}/${OB_TOTAL}
+            <div class="ob-bar"><div class="ob-bar-fill${pct===100?' done':''}" style="width:${pct}%"></div></div>
+          </div>
+          <svg class="ob-chevron" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 4l6 6-6 6"/></svg>
+        </div>`;
+
+      if(isOpen){
+        html+='<div class="ob-body">';
+        OB_PHASES.forEach(phase=>{
+          if(phase.partLabel)html+=`<div class="ob-part">${escHtml(phase.partLabel)}</div>`;
+          const pChecked=phase.items.filter(it=>checks[it.id]).length;
+          html+=`<div class="ob-phase-head"><span>${escHtml(phase.title)}</span><span>${pChecked}/${phase.items.length}</span></div>`;
+          phase.items.forEach(it=>{
+            const isChecked=!!checks[it.id];
+            html+=`<label class="ob-item${isChecked?' checked':''}">
+              <input type="checkbox" ${isChecked?'checked':''} ${signedIn?'':'disabled'} onchange="toggleObCheck('${s.id}',${s.rowIndex},'${it.id}',this.checked)">
+              <span>${escHtml(it.text)}${obTag(it.tag)}</span>
+            </label>`;
+          });
+        });
+        html+='<div class="ob-links"><div class="ob-phase-head"><span>Recommended viewing</span></div>';
+        OB_RESOURCES.forEach(r=>{
+          html+=`<a href="${r[1]}" target="_blank" rel="noopener">${escHtml(r[0])}</a>`;
+        });
+        html+='</div>';
+        if(signedIn){
+          const safeName=escHtml(s.name||'').replace(/'/g,"\\'");
+          html+=`<div class="ob-actions">
+            <button onclick="setObArchived('${s.id}',${s.rowIndex},${s.archived?'false':'true'})">${s.archived?'Move back to active':'Mark complete'}</button>
+            ${dir?`<button class="danger" onclick="removeStarter('${s.id}',${s.rowIndex},'${safeName}')">Remove</button>`:''}
+          </div>`;
+        }
+        html+='</div>';
+      }
+      html+='</div>';
+    });
+  }
+
+  c.innerHTML=html;
+}
+
+function setObRange(showAll){_obShowArchived=showAll;_obOpenId=null;loadOnboarding();}
+function toggleObCard(id){_obOpenId=(_obOpenId===id?null:id);renderOnboarding(_obCache);}
+
+async function submitStarter(){
+  const name=document.getElementById('ob-name').value.trim();
+  const role=document.getElementById('ob-role').value.trim();
+  const startDate=document.getElementById('ob-start').value;
+  const manager=document.getElementById('ob-manager').value.trim();
+  const depot=document.getElementById('ob-depot').value.trim();
+  const msg=document.getElementById('ob-msg');
+  const btn=document.getElementById('ob-submit');
+  if(!name){msg.textContent='Name required.';msg.className='ob-msg err on';return;}
+  btn.disabled=true;msg.className='ob-msg';
+  try{
+    const res=await fetch('/.netlify/functions/onboarding',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({name,role,startDate,manager,depot})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    msg.textContent='Added.';msg.className='ob-msg on';
+    setTimeout(()=>{msg.classList.remove('on');loadOnboarding();},800);
+  }catch(e){
+    msg.textContent='Error: '+e.message;msg.className='ob-msg err on';
+  }finally{
+    btn.disabled=false;
+  }
+}
+
+async function toggleObCheck(id,rowIndex,itemId,value){
+  try{
+    const res=await fetch('/.netlify/functions/onboarding',{
+      method:'PATCH',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,itemId,value})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){
+      const s=(_obCache.items||[]).find(x=>x.id===id);
+      if(s)s.checks=data.checks;
+    }
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function setObArchived(id,rowIndex,value){
+  try{
+    const res=await fetch('/.netlify/functions/onboarding',{
+      method:'PATCH',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,archived:value})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    loadOnboarding();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+async function removeStarter(id,rowIndex,name){
+  if(!confirm('Remove '+(name||'this starter')+" — this can't be undone."))return;
+  try{
+    const res=await fetch('/.netlify/functions/onboarding',{
+      method:'DELETE',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    _obOpenId=null;
+    loadOnboarding();
+  }catch(e){alert('Error: '+e.message);}
+}
+
+// Wire up: load notifications / onboarding when their tab is opened
 const _origSwitchTab=switchTab;
 window.switchTab=function(tab){
   _origSwitchTab(tab);
   if(tab==='notifs')loadNotifs();
+  if(tab==='onboarding')loadOnboarding();
 };
 </script>
 </body>
