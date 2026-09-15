@@ -5,10 +5,11 @@ const { createSign } = require('crypto');
 const SHEET_ID = process.env.GL_SHEET_ID;
 const SHEET_NAME = 'Onboarding';
 
-// The Shared Drive (or a folder inside one) under which "Staff/Employees/<name>"
-// gets created. Set this as a Netlify env var once Drive access is granted —
-// until then, every Drive-touching step below no-ops quietly so starter
-// add/tick/archive/remove keeps working on the sheet alone.
+// The ID of the "Staff" folder itself (Harper Hill Grounds Ltd > Staff),
+// under which "Employees/<name>" gets created. Set this as a Netlify env
+// var once Drive access is granted — until then, every Drive-touching
+// step below no-ops quietly so starter add/tick/archive/remove keeps
+// working on the sheet alone.
 const STAFF_DRIVE_ROOT_ID = process.env.GL_STAFF_DRIVE_ID;
 
 // Manual manager lookup: the "Manager" name typed on the Starters form,
@@ -265,14 +266,14 @@ function lookupManagerEmail(managerName) {
   return MANAGER_EMAILS[String(managerName).trim().toLowerCase()] || null;
 }
 
-// Creates Staff/Employees/<starter name> under the configured Drive root
-// (auto-creating "Staff" and "Employees" the first time), and shares it
-// with the looked-up manager + everyone in MANAGEMENT_EMAILS. Returns
-// { id, url } or null if Drive isn't configured yet.
+// Creates Employees/<starter name> under the configured "Staff" folder
+// (GL_STAFF_DRIVE_ID — the Staff folder itself, auto-creating "Employees"
+// the first time), and shares the new folder with the looked-up manager
+// plus everyone in MANAGEMENT_EMAILS. Returns { id, url } or null if
+// Drive isn't configured yet.
 async function createStarterFolder(token, starterName, managerName) {
   if (!STAFF_DRIVE_ROOT_ID) return null;
-  const staffId = await ensureFolder(token, 'Staff', STAFF_DRIVE_ROOT_ID);
-  const employeesId = await ensureFolder(token, 'Employees', staffId);
+  const employeesId = await ensureFolder(token, 'Employees', STAFF_DRIVE_ROOT_ID);
   const folderId = await ensureFolder(token, starterName, employeesId);
 
   const managerEmail = lookupManagerEmail(managerName);
