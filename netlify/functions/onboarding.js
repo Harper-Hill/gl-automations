@@ -23,6 +23,29 @@ const MANAGER_EMAILS = {
 };
 const MANAGEMENT_EMAILS = ['info@harperhill.co.uk'];
 
+// ── CHECKLIST CONFIG (Google Sheet–driven checklist items) ─────
+// The "Checklist Config" tab lets Peter add/edit/remove the onboarding
+// checklist's line items without touching the dashboard's code or
+// redeploying. One row per item:
+//   A=phaseKey, B=phaseTitle, C=partLabel (only needed on the first
+//   phase of a new part — leave blank otherwise), D=text,
+//   E=tag (statutory/company/recommended/none), F=info (tooltip text,
+//   optional), G=upload (TRUE to show an upload/photo button),
+//   H=form (nok/hmrc/bank, optional).
+// Rows are grouped into phases by phaseKey, in the order each key
+// first appears: reorder items by moving rows, reorder phases by
+// moving all of a phase's rows together, add a phase with a new key.
+const CONFIG_SHEET_NAME = 'Checklist Config';
+const CONFIG_HEADERS = ['phaseKey', 'phaseTitle', 'partLabel', 'text', 'tag', 'info', 'upload', 'form'];
+const CONFIG_RANGE_ALL = CONFIG_SHEET_NAME + '!A2:H';
+
+// Seeded into the Checklist Config tab the first time it's created, so
+// the checklist reads exactly as it did before this became editable.
+// The sheet is the source of truth after that — this is never read
+// again once the tab exists.
+const DEFAULT_CHECKLIST_ROWS = [["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Right to work check completed and evidence copied/retained before the start date","statutory","Check original ID in person, via the Home Office's online share-code service, or an approved digital identity check — then keep dated copies. See gov.uk's right to work checks guide for the current accepted document lists.","TRUE",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Signed contract of employment / offer letter returned","statutory","","TRUE",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","HMRC Starter Checklist completed if no valid P45 supplied","statutory","Needed when there's no valid P45 — it sets the new starter's tax code and student loan plan.","TRUE","hmrc"],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Emergency contact / next of kin details collected","statutory","","","nok"],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Bank details collected for payroll (Starling payroll run)","company","","","bank"],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","DVLA driving licence check completed if the role involves driving a company vehicle","statutory","Ask for their driving licence check code (gov.uk 'View driving licence information') and confirm it covers the vehicle category before they drive for you.","TRUE",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","DBS check considered if work will regularly take place on school grounds or around children","recommended","Only usually needed if the role means regular, supervised contact with children — e.g. mowing/spraying at a school during term time. Check gov.uk's DBS eligibility guidance if unsure.","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","References requested and reviewed","recommended","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","PPE sized and ordered: boots, gloves, hi-vis, waterproofs","statutory","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Uniform ordered","company","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Vehicle and equipment allocated and logged in Asset Tracker","company","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Site rota / job schedule set up in Jobber","company","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Company email and Google Drive access created, with correct folder permissions","company","Once it exists, add it in the Company email field at the top of this checklist so their Drive folder access can be granted.","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Harper Hill Dashboard / Notify login created","company","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Asset Tracker (DepotPro) login created and linked to the correct depot","company","","",""],["p1","Phase 1 — Before day 1 (pre-boarding)","Part A — Statutory & company onboarding","Staff salary workbook created in Google Sheets","company","","",""],["p2","Phase 2 — Day 1","","Welcome and introduction to the director and wider team","none","","",""],["p2","Phase 2 — Day 1","","Written statement of employment particulars issued","statutory","Legally required no later than day 1 — must cover pay, hours, holiday entitlement, notice periods and job title/duties at minimum.","TRUE",""],["p2","Phase 2 — Day 1","","Employers' liability insurance certificate reference shown to employee","statutory","Just show them where it's displayed/kept — by law it must be available to staff, with current cover of at least £5 million.","",""],["p2","Phase 2 — Day 1","","Health & safety induction: hazards, welfare facilities, accident reporting, first aider location","statutory","","",""],["p2","Phase 2 — Day 1","","PPE issued, fitted, and correct use demonstrated","statutory","","",""],["p2","Phase 2 — Day 1","","COSHH awareness: chemical/fuel storage, data sheet locations, safe handling","statutory","Point out where safety data sheets are kept for anything sprayed or handled, and how to read one.","",""],["p2","Phase 2 — Day 1","","Manual handling briefing given","statutory","","",""],["p2","Phase 2 — Day 1","","Vehicle keys handed over; DVLA licence check confirmed before any driving","statutory","","",""],["p2","Phase 2 — Day 1","","Waste carrier licence procedures explained: green waste, chemical containers, general waste","statutory","","",""],["p2","Phase 2 — Day 1","","Jobber app walkthrough: job sheets, start/finish tasks, Next Visit instructions","company","","",""],["p2","Phase 2 — Day 1","","Harper Hill Dashboard / Notify tab walkthrough: briefings, task read receipts","company","","",""],["p2","Phase 2 — Day 1","","Google Drive folder structure and access permissions shown","company","","",""],["p2","Phase 2 — Day 1","","Asset Tracker walkthrough: equipment condition, maintenance notes, fuel and mileage","company","","",""],["p2","Phase 2 — Day 1","","Working hours, breaks and lone-working procedure explained","statutory","","",""],["p2","Phase 2 — Day 1","","Pay day, payslip access and mileage claim process explained","company","","",""],["p2","Phase 2 — Day 1","","Data protection: how personal data is used and stored, privacy notice given","statutory","","",""],["p2","Phase 2 — Day 1","","Emergency procedures explained: fire, accident, nearest A&E for common sites","statutory","","",""],["p2","Phase 2 — Day 1","","Equality, diversity and anti-bullying policy overview given","statutory","","",""],["p3","Phase 3 — First week","","PA1/PA6 pesticide certification status confirmed; supervised use only until certificated","statutory","PA1 (foundation) and PA6 (boom sprayer) certify someone to use pesticides unsupervised — supervised use only until they hold both.","TRUE",""],["p3","Phase 3 — First week","","PA1/PA6 training booked if required and not already held","recommended","","",""],["p3","Phase 3 — First week","","NPTC/LANTRA certification checked for powered equipment used; refresher booked if lapsed","statutory","","TRUE",""],["p3","Phase 3 — First week","","Shadowed an experienced team member on at least 2–3 jobs","recommended","","",""],["p3","Phase 3 — First week","","Reviewed risk assessments for typical job types (mowing, hedge cutting, spraying, roadside work)","statutory","","",""],["p3","Phase 3 — First week","","Trailer towing entitlement confirmed if the role requires towing","statutory","Category B licences issued before 1 January 1997 usually cover this; later licences may need category BE — check gov.uk if unsure.","",""],["p3","Phase 3 — First week","","HMRC Starter Checklist submitted to payroll; correct tax code confirmed on first payslip","statutory","","",""],["p3","Phase 3 — First week","","Pension auto-enrolment assessment carried out; enrolment notice issued if eligible","statutory","Check current auto-enrolment earnings thresholds on gov.uk if you're not sure whether this employee qualifies.","",""],["p4","Phase 4 — First month","","Probation review date set and communicated","recommended","","",""],["p4","Phase 4 — First month","","All required certificates (PA1/PA6, chainsaw/NPTC, first aid if applicable) confirmed and filed","statutory","","TRUE",""],["p4","Phase 4 — First month","","1:1 systems check-in: confidence with Jobber, Asset Tracker, Dashboard, Google Drive","company","","",""],["p4","Phase 4 — First month","","National Minimum/Living Wage compliance confirmed for the employee's age band","statutory","Rates change every April — check the current National Minimum/Living Wage rate for this employee's age band on gov.uk before their first payslip.","",""],["p4","Phase 4 — First month","","Signed checklist filed in the employee's HR record","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Add line items and invoice a job — for spraying, remember it's priced as a percentage/decimal using 8 litres as the base measurement","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Edit job instructions","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Text a client directly from a job","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Track time on a job","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Upload job photos to Google Drive","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Update the admin and maintenance lists","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Pull up job directions","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","View previous job notes","company","","",""],["p5","Jobber — day-to-day use","Part B — Practical skills & equipment induction","Add notes to a job","company","","",""],["p6","Van","","Location of petty cash and the diesel card, and correct use of both","company","","",""],["p6","Van","","Locations of the first aid kit, fire extinguisher and accident book","statutory","","",""],["p6","Van","","Locations of wipes and other personal cleaning items","company","","",""],["p6","Van","","Correct lashing of roof cargo (ladders especially), including proper use of bungees and toe clip straps","company","","",""],["p6","Van","","Never lean tools against the van","company","","",""],["p6","Van","","How to properly start the van","company","","",""],["p6","Van","","How to check tyre pressures and inflate them (workshop air compressor)","company","","",""],["p6","Van","","Correct storage of equipment: wall hooks, long tool rack, buckets, cubby holes, etc.","company","","",""],["p6","Van","","Correct cargo layout on full-van days: frequently used items nearest the doors, small ladder storage, planning for anything left behind","company","","",""],["p6","Van","","End-of-day procedure: waste, batteries, prep for the next day","company","","",""],["p6","Van","","Informed about the GPS vehicle tracker","statutory","","",""],["p6","Van","","Locations of PPE in the van: glasses, gloves and glove etiquette, ear defenders, etc.","statutory","","",""],["p7","Trailer","","Correct attachment to the vehicle","company","","",""],["p7","Trailer","","Correct lashing of cargo","company","","",""],["p7","Trailer","","How to securely lock the gates","company","","",""],["p7","Trailer","","Correct weight distribution","company","","",""],["p7","Trailer","","Don't step on the mudguards","company","","",""],["p7","Trailer","","How to help back up a trailer, staying in sight of the mirrors at all times","company","","",""],["p8","Machines & equipment","","How to sharpen and tighten a chainsaw and pole saw","company","","",""],["p8","Machines & equipment","","Etesia push mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company","","",""],["p8","Machines & equipment","","Honda-powered equipment: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company","","",""],["p8","Machines & equipment","","Scarifier: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company","","",""],["p8","Machines & equipment","","Ride-on mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company","","",""],["p8","Machines & equipment","","How to store and secure ladders","company","","",""],["p8","Machines & equipment","","How to sharpen secateurs","company","","",""],["p8","Machines & equipment","","How to clean secateurs, loppers and shears","company","","",""],["p8","Machines & equipment","","How to start and use the ride-on mower","company","","",""],["p8","Machines & equipment","","How to use secateurs, loppers and shears","company","","",""],["p8","Machines & equipment","","How to sharpen mower blades","company","","",""],["p8","Machines & equipment","","How and when to clean hedgetrimmer blades","company","","",""],["p8","Machines & equipment","","How to use the edger","company","","",""],["p8","Machines & equipment","","How to change the strimmer head and line","company","","",""],["p8","Machines & equipment","","Correct use of ladders: three points of contact, etc.","statutory","","",""],["p9","Base","","What's stored where","company","","",""],["p9","Base","","What the various areas of the base are called","company","","",""]];
+
+
 // Column letters for Onboarding:
 // A=ID, B=Created, C=Name, D=Role, E=StartDate, F=Manager, G=Depot,
 // H=Archived, I=ChecksJson, J=Email, K=DriveFolderId, L=DriveFolderUrl,
@@ -173,17 +196,21 @@ async function sheetsBatchUpdate(token, requests) {
   return r.body;
 }
 
-async function getSheetNumericId(token) {
+async function getSheetIdByName(token, name) {
   const r = await req({
     hostname: 'sheets.googleapis.com',
     path: '/v4/spreadsheets/' + SHEET_ID + '?fields=' + encodeURIComponent('sheets.properties'),
     method: 'GET',
     headers: { Authorization: 'Bearer ' + token }
   });
-  if (r.status >= 400) throw new Error('getSheetNumericId ' + r.status + ': ' + JSON.stringify(r.body));
+  if (r.status >= 400) throw new Error('getSheetIdByName ' + r.status + ': ' + JSON.stringify(r.body));
   const sheets = (r.body && r.body.sheets) || [];
-  const match = sheets.find(s => s.properties && s.properties.title === SHEET_NAME);
+  const match = sheets.find(s => s.properties && s.properties.title === name);
   return match ? match.properties.sheetId : null;
+}
+
+async function getSheetNumericId(token) {
+  return getSheetIdByName(token, SHEET_NAME);
 }
 
 // Creates the Onboarding tab (with header row) the first time it's needed.
@@ -192,6 +219,57 @@ async function ensureSheet(token) {
   if (existingId !== null) return;
   await sheetsBatchUpdate(token, [{ addSheet: { properties: { title: SHEET_NAME } } }]);
   await sheetsUpdate(token, SHEET_NAME + '!A1:S1', [HEADERS]);
+}
+
+// Creates the Checklist Config tab (with header row + the default 91
+// items) the first time it's needed, so editing the checklist is just
+// editing rows in a familiar sheet from day one.
+async function ensureConfigSheet(token) {
+  const existingId = await getSheetIdByName(token, CONFIG_SHEET_NAME);
+  if (existingId !== null) return;
+  await sheetsBatchUpdate(token, [{ addSheet: { properties: { title: CONFIG_SHEET_NAME } } }]);
+  await sheetsUpdate(token, CONFIG_SHEET_NAME + '!A1:H1', [CONFIG_HEADERS]);
+  await sheetsAppend(token, CONFIG_SHEET_NAME + '!A:H', DEFAULT_CHECKLIST_ROWS);
+}
+
+// Reads the Checklist Config tab and groups its rows into phases, in
+// the order each phaseKey first appears. A row with no phaseKey or no
+// item text is skipped (lets Peter leave a blank spacer row).
+async function handleGetConfig(token) {
+  const data = await sheetsGet(token, CONFIG_RANGE_ALL);
+  const rows = data.values || [];
+  const phases = [];
+  const byKey = {};
+
+  rows.forEach(r => {
+    const key = String(r[0] || '').trim();
+    const text = String(r[3] || '').trim();
+    if (!key || !text) return;
+
+    let phase = byKey[key];
+    if (!phase) {
+      phase = {
+        key,
+        title: String(r[1] || '').trim() || key,
+        partLabel: String(r[2] || '').trim() || undefined,
+        items: []
+      };
+      byKey[key] = phase;
+      phases.push(phase);
+    } else if (!phase.partLabel && String(r[2] || '').trim()) {
+      phase.partLabel = String(r[2] || '').trim();
+    }
+
+    const meta = {};
+    if (String(r[5] || '').trim()) meta.i = String(r[5]).trim();
+    if (String(r[6] || '').trim().toUpperCase() === 'TRUE') meta.u = true;
+    const formVal = String(r[7] || '').trim().toLowerCase();
+    if (formVal === 'nok' || formVal === 'hmrc' || formVal === 'bank') meta.f = formVal;
+
+    phase.items.push({ text, tag: String(r[4] || '').trim() || 'none', meta });
+  });
+
+  return { phases };
 }
 
 function safeParseJson(s) {
@@ -665,7 +743,12 @@ exports.handler = async (event) => {
 
     let result;
     if (event.httpMethod === 'GET') {
-      result = await handleGet(token, qs);
+      if (qs.resource === 'config') {
+        await ensureConfigSheet(token);
+        result = await handleGetConfig(token);
+      } else {
+        result = await handleGet(token, qs);
+      }
     } else if (event.httpMethod === 'POST') {
       const body = JSON.parse(event.body || '{}');
       result = await handlePost(token, body, user, qs);

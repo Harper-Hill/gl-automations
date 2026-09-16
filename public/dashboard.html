@@ -907,121 +907,29 @@ const OB_RESOURCES=[
   ["What I've Learned from 20 Years as a Builder","https://www.youtube.com/watch?v=qcFx35eTN-c"],
   ["How Costco Mastered Capitalism Without Being Greedy","https://youtu.be/KxELxC8TWKg?si=gzUO0sTADmPQUW-K"]
 ];
-const OB_PHASES=[
-  {key:"p1",part:"A",partLabel:"Part A — Statutory & company onboarding",title:"Phase 1 — Before day 1 (pre-boarding)",items:[
-    ["Right to work check completed and evidence copied/retained before the start date","statutory",{i:"Check original ID in person, via the Home Office's online share-code service, or an approved digital identity check — then keep dated copies. See gov.uk's right to work checks guide for the current accepted document lists.",u:true}],
-    ["Signed contract of employment / offer letter returned","statutory",{u:true}],
-    ["HMRC Starter Checklist completed if no valid P45 supplied","statutory",{i:"Needed when there's no valid P45 — it sets the new starter's tax code and student loan plan.",f:"hmrc",u:true}],
-    ["Emergency contact / next of kin details collected","statutory",{f:"nok"}],
-    ["Bank details collected for payroll (Starling payroll run)","company",{f:"bank"}],
-    ["DVLA driving licence check completed if the role involves driving a company vehicle","statutory",{i:"Ask for their driving licence check code (gov.uk 'View driving licence information') and confirm it covers the vehicle category before they drive for you.",u:true}],
-    ["DBS check considered if work will regularly take place on school grounds or around children","recommended",{i:"Only usually needed if the role means regular, supervised contact with children — e.g. mowing/spraying at a school during term time. Check gov.uk's DBS eligibility guidance if unsure."}],
-    ["References requested and reviewed","recommended"],
-    ["PPE sized and ordered: boots, gloves, hi-vis, waterproofs","statutory"],
-    ["Uniform ordered","company"],
-    ["Vehicle and equipment allocated and logged in Asset Tracker","company"],
-    ["Site rota / job schedule set up in Jobber","company"],
-    ["Company email and Google Drive access created, with correct folder permissions","company",{i:"Once it exists, add it in the Company email field at the top of this checklist so their Drive folder access can be granted."}],
-    ["Harper Hill Dashboard / Notify login created","company"],
-    ["Asset Tracker (DepotPro) login created and linked to the correct depot","company"],
-    ["Staff salary workbook created in Google Sheets","company"]
-  ]},
-  {key:"p2",title:"Phase 2 — Day 1",items:[
-    ["Welcome and introduction to the director and wider team","none"],
-    ["Written statement of employment particulars issued","statutory",{i:"Legally required no later than day 1 — must cover pay, hours, holiday entitlement, notice periods and job title/duties at minimum.",u:true}],
-    ["Employers' liability insurance certificate reference shown to employee","statutory",{i:"Just show them where it's displayed/kept — by law it must be available to staff, with current cover of at least £5 million."}],
-    ["Health & safety induction: hazards, welfare facilities, accident reporting, first aider location","statutory"],
-    ["PPE issued, fitted, and correct use demonstrated","statutory"],
-    ["COSHH awareness: chemical/fuel storage, data sheet locations, safe handling","statutory",{i:"Point out where safety data sheets are kept for anything sprayed or handled, and how to read one."}],
-    ["Manual handling briefing given","statutory"],
-    ["Vehicle keys handed over; DVLA licence check confirmed before any driving","statutory"],
-    ["Waste carrier licence procedures explained: green waste, chemical containers, general waste","statutory"],
-    ["Jobber app walkthrough: job sheets, start/finish tasks, Next Visit instructions","company"],
-    ["Harper Hill Dashboard / Notify tab walkthrough: briefings, task read receipts","company"],
-    ["Google Drive folder structure and access permissions shown","company"],
-    ["Asset Tracker walkthrough: equipment condition, maintenance notes, fuel and mileage","company"],
-    ["Working hours, breaks and lone-working procedure explained","statutory"],
-    ["Pay day, payslip access and mileage claim process explained","company"],
-    ["Data protection: how personal data is used and stored, privacy notice given","statutory"],
-    ["Emergency procedures explained: fire, accident, nearest A&E for common sites","statutory"],
-    ["Equality, diversity and anti-bullying policy overview given","statutory"]
-  ]},
-  {key:"p3",title:"Phase 3 — First week",items:[
-    ["PA1/PA6 pesticide certification status confirmed; supervised use only until certificated","statutory",{i:"PA1 (foundation) and PA6 (boom sprayer) certify someone to use pesticides unsupervised — supervised use only until they hold both.",u:true}],
-    ["PA1/PA6 training booked if required and not already held","recommended"],
-    ["NPTC/LANTRA certification checked for powered equipment used; refresher booked if lapsed","statutory",{u:true}],
-    ["Shadowed an experienced team member on at least 2–3 jobs","recommended"],
-    ["Reviewed risk assessments for typical job types (mowing, hedge cutting, spraying, roadside work)","statutory"],
-    ["Trailer towing entitlement confirmed if the role requires towing","statutory",{i:"Category B licences issued before 1 January 1997 usually cover this; later licences may need category BE — check gov.uk if unsure."}],
-    ["HMRC Starter Checklist submitted to payroll; correct tax code confirmed on first payslip","statutory"],
-    ["Pension auto-enrolment assessment carried out; enrolment notice issued if eligible","statutory",{i:"Check current auto-enrolment earnings thresholds on gov.uk if you're not sure whether this employee qualifies."}]
-  ]},
-  {key:"p4",title:"Phase 4 — First month",items:[
-    ["Probation review date set and communicated","recommended"],
-    ["All required certificates (PA1/PA6, chainsaw/NPTC, first aid if applicable) confirmed and filed","statutory",{u:true}],
-    ["1:1 systems check-in: confidence with Jobber, Asset Tracker, Dashboard, Google Drive","company"],
-    ["National Minimum/Living Wage compliance confirmed for the employee's age band","statutory",{i:"Rates change every April — check the current National Minimum/Living Wage rate for this employee's age band on gov.uk before their first payslip."}],
-    ["Signed checklist filed in the employee's HR record","company"]
-  ]},
-  {key:"p5",part:"B",partLabel:"Part B — Practical skills & equipment induction",title:"Jobber — day-to-day use",items:[
-    ["Add line items and invoice a job — for spraying, remember it's priced as a percentage/decimal using 8 litres as the base measurement","company"],
-    ["Edit job instructions","company"],
-    ["Text a client directly from a job","company"],
-    ["Track time on a job","company"],
-    ["Upload job photos to Google Drive","company"],
-    ["Update the admin and maintenance lists","company"],
-    ["Pull up job directions","company"],
-    ["View previous job notes","company"],
-    ["Add notes to a job","company"]
-  ]},
-  {key:"p6",title:"Van",items:[
-    ["Location of petty cash and the diesel card, and correct use of both","company"],
-    ["Locations of the first aid kit, fire extinguisher and accident book","statutory"],
-    ["Locations of wipes and other personal cleaning items","company"],
-    ["Correct lashing of roof cargo (ladders especially), including proper use of bungees and toe clip straps","company"],
-    ["Never lean tools against the van","company"],
-    ["How to properly start the van","company"],
-    ["How to check tyre pressures and inflate them (workshop air compressor)","company"],
-    ["Correct storage of equipment: wall hooks, long tool rack, buckets, cubby holes, etc.","company"],
-    ["Correct cargo layout on full-van days: frequently used items nearest the doors, small ladder storage, planning for anything left behind","company"],
-    ["End-of-day procedure: waste, batteries, prep for the next day","company"],
-    ["Informed about the GPS vehicle tracker","statutory"],
-    ["Locations of PPE in the van: glasses, gloves and glove etiquette, ear defenders, etc.","statutory"]
-  ]},
-  {key:"p7",title:"Trailer",items:[
-    ["Correct attachment to the vehicle","company"],
-    ["Correct lashing of cargo","company"],
-    ["How to securely lock the gates","company"],
-    ["Correct weight distribution","company"],
-    ["Don't step on the mudguards","company"],
-    ["How to help back up a trailer, staying in sight of the mirrors at all times","company"]
-  ]},
-  {key:"p8",title:"Machines & equipment",items:[
-    ["How to sharpen and tighten a chainsaw and pole saw","company"],
-    ["Etesia push mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
-    ["Honda-powered equipment: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
-    ["Scarifier: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
-    ["Ride-on mower: carrying out repairs, reporting faults that can't be mended, and storing repair tools correctly","company"],
-    ["How to store and secure ladders","company"],
-    ["How to sharpen secateurs","company"],
-    ["How to clean secateurs, loppers and shears","company"],
-    ["How to start and use the ride-on mower","company"],
-    ["How to use secateurs, loppers and shears","company"],
-    ["How to sharpen mower blades","company"],
-    ["How and when to clean hedgetrimmer blades","company"],
-    ["How to use the edger","company"],
-    ["How to change the strimmer head and line","company"],
-    ["Correct use of ladders: three points of contact, etc.","statutory"]
-  ]},
-  {key:"p9",title:"Base",items:[
-    ["What's stored where","company"],
-    ["What the various areas of the base are called","company"]
-  ]}
-];
+// Checklist line items live in the "Checklist Config" Google Sheet tab
+// (see onboarding.js) so Peter can add/edit/reorder/remove them without
+// touching this file — loaded once per page load and cached.
+let OB_PHASES=[];
 let OB_TOTAL=0;
-OB_PHASES.forEach(phase=>{
-  phase.items=phase.items.map((it,i)=>{OB_TOTAL++;return{id:phase.key+'-'+i,text:it[0],tag:it[1],meta:it[2]||{}};});
-});
+let _obConfigCache=null;
+async function loadObConfig(){
+  if(_obConfigCache)return _obConfigCache;
+  const res=await fetch('/.netlify/functions/onboarding?resource=config');
+  const data=await res.json();
+  if(data.error)throw new Error(data.error);
+  let total=0;
+  const phases=(data.phases||[]).map(phase=>({
+    key:phase.key,
+    partLabel:phase.partLabel,
+    title:phase.title,
+    items:(phase.items||[]).map((it,i)=>{total++;return{id:phase.key+'-'+i,text:it.text,tag:it.tag,meta:it.meta||{}};})
+  }));
+  OB_PHASES=phases;
+  OB_TOTAL=total;
+  _obConfigCache=phases;
+  return phases;
+}
 let _obShowArchived=false, _obOpenId=null, _obCache=null, _obActiveForm=null, _obExpandedItems=new Set();
 function obTag(tag){
   if(tag==='none'||!tag)return '';
@@ -1046,7 +954,7 @@ async function loadOnboarding(){
   c.innerHTML='<div class="loading"><div class="spinner"></div>Loading...</div>';
   try{
     const url='/.netlify/functions/onboarding'+(_obShowArchived?'?includeArchived=1':'');
-    const res=await fetch(url);
+    const [,res]=await Promise.all([loadObConfig(),fetch(url)]);
     const data=await res.json();
     if(data.error)throw new Error(data.error);
     _obCache=data;
