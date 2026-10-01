@@ -1,8 +1,11 @@
 // One-off backfill: fetches Jobber invoices from last N hours and writes to sheet
-// Hit: https://gl-automations.netlify.app/.netlify/functions/jobber-backfill?hours=2
+// Hit: https://gl-automations.netlify.app/.netlify/functions/jobber-backfill?hours=2  (header X-Admin-Key: $ADMIN_KEY)
 'use strict';
 const https = require('https');
 const { createSign } = require('crypto');
+const { refreshIncomeFormulas, ukDate } = require('./_shared/gl-formulas');
+const { getRefreshToken, saveRefreshToken } = require('./_shared/jobber-token-store');
+const { isAuthorised } = require('./_shared/auth');
 
 const CFG = {
   CLIENT_ID:      process.env.JOBBER_GL_CLIENT_ID,
@@ -59,16 +62,16 @@ async function getGoogleToken(sa) {
 }
 
 async function getJobberToken(googleToken) {
-  const cfgRes = await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1`, method:'GET', headers:{Authorization:`Bearer ${googleToken}`} });
-  const refreshToken = cfgRes.data.values && cfgRes.data.values[0] && cfgRes.data.values[0][0];
-  if (!refreshToken) throw new Error('No refresh token in Config!B1');
+  const refreshToken = await getRefreshToken(async () => {
+    const cfgRes = await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1`, method:'GET', headers:{Authorization:`Bearer ${googleToken}`} });
+    return cfgRes.data.values && cfgRes.data.values[0] && cfgRes.data.values[0][0];
+  });
+  if (!refreshToken) throw new Error('No Jobber refresh token stored - re-authorise Jobber');
   const body = `client_id=${CFG.CLIENT_ID}&client_secret=${CFG.CLIENT_SECRET}&grant_type=refresh_token&refresh_token=${encodeURIComponent(refreshToken)}`;
   const res = await req({ hostname:'api.getjobber.com', path:'/api/oauth/token', method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'} }, body);
   if (!res.data.access_token) throw new Error('Jobber token error: ' + JSON.stringify(res.data));
   // Rotate refresh token
-  if (res.data.refresh_token) {
-    await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1?valueInputOption=RAW`, method:'PUT', headers:{Authorization:`Bearer ${googleToken}`,'Content-Type':'application/json'} }, { values: [[res.data.refresh_token]] });
-  }
+  if (res.data.refresh_token) await saveRefreshToken(res.data.refresh_token);
   return res.data.access_token;
 }
 
@@ -104,14 +107,14 @@ async function getExistingInvoiceNos(googleToken) {
 }
 
 function mapInvoiceRow(inv) {
-  const postedDate = inv.createdAt ? new Date(inv.createdAt).toLocaleDateString('en-GB') : '';
-  const taxDate = inv.issuedDate ? new Date(inv.issuedDate).toLocaleDateString('en-GB') : postedDate;
+  const postedDate = inv.createdAt ? ukDate(inv.createdAt) : '';
+  const taxDate = inv.issuedDate ? ukDate(inv.issuedDate) : postedDate;
   const client = inv.client ? (inv.client.companyName || inv.client.name || '') : '';
   const job = inv.jobs && inv.jobs.nodes && inv.jobs.nodes[0];
   const desc = job ? `${job.jobNumber} – ${job.title}` : (inv.lineItems && inv.lineItems.nodes.length ? inv.lineItems.nodes[0].name : '');
   const total = parseFloat(inv.total || 0).toFixed(2);
   const datePaid = '';
-  const row = new Array(20).fill('');
+  const row = new Array(24).fill('');
   row[0] = postedDate;
   row[1] = taxDate;
   row[2] = client;
@@ -120,7 +123,7 @@ function mapInvoiceRow(inv) {
   row[5] = String(inv.invoiceNumber);
   row[7] = 'SALES';
   row[8] = total;
-  row[19] = datePaid;
+  row[19] = datePaid || 'Not Yet Paid';
   return row;
 }
 
@@ -128,10 +131,15 @@ async function appendAndSort(googleToken, rows) {
   const range = encodeURIComponent(CFG.SHEET_TAB + '!A:T');
   await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/${range}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, method:'POST', headers:{Authorization:`Bearer ${googleToken}`,'Content-Type':'application/json'} }, { values: rows });
   await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}:batchUpdate`, method:'POST', headers:{Authorization:`Bearer ${googleToken}`,'Content-Type':'application/json'} },
-    { requests:[{ sortRange:{ range:{ sheetId:parseInt(CFG.SHEET_GID,10), startRowIndex:1, startColumnIndex:0, endColumnIndex:20 }, sortSpecs:[{ dimensionIndex:0, sortOrder:'ASCENDING' }] } }] });
+    { requests:[{ sortRange:{ range:{ sheetId:parseInt(CFG.SHEET_GID,10), startRowIndex:1, startColumnIndex:0, endColumnIndex:24 }, sortSpecs:[{ dimensionIndex:0, sortOrder:'ASCENDING' }] } }] });
+  // Re-point formula columns at their own rows after the sort
+  const colA = await req({ hostname:'sheets.googleapis.com', path:`/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent(CFG.SHEET_TAB + '!A:A')}`, method:'GET', headers:{Authorization:`Bearer ${googleToken}`} });
+  await refreshIncomeFormulas(googleToken, CFG.SHEET_ID, parseInt(CFG.SHEET_GID,10), (colA.data.values || []).length)
+    .catch(e => console.error('refreshIncomeFormulas failed:', e.message));
 }
 
 exports.handler = async (event) => {
+  if (!isAuthorised(event)) return { statusCode: 401, body: 'unauthorized' };
   try {
     const hours = parseInt((event.queryStringParameters && event.queryStringParameters.hours) || '2', 10);
     console.log(`Backfilling Jobber invoices from last ${hours} hours`);

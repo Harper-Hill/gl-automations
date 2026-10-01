@@ -7,6 +7,7 @@
 'use strict';
 const https = require('https');
 const { createSign } = require('crypto');
+const { refreshExpenseFormulas, refreshIncomeFormulas, ukDate } = require('./_shared/gl-formulas');
 const CFG = {
   STRIPE_KEY:     process.env.STRIPE_API_KEY,
   SHEET_ID:       process.env.GL_SHEET_ID,
@@ -91,7 +92,7 @@ async function getAllCharges(since) {
   return charges;
 }
 function mapIncomeRow(charge) {
-  const d = new Date(charge.created * 1000).toLocaleDateString('en-GB');
+  const d = ukDate(new Date(charge.created * 1000));
   const amount = (charge.amount / 100).toFixed(2);
   const customer = (charge.billing_details && (charge.billing_details.name || charge.billing_details.email)) || charge.customer || '';
   const description = charge.description || 'Stripe payment';
@@ -104,11 +105,11 @@ function mapIncomeRow(charge) {
 function mapFeeRow(charge) {
   const bt = charge.balance_transaction;
   if (!bt || typeof bt !== 'object' || !bt.fee || bt.fee === 0) return null;
-  const d = new Date(charge.created * 1000).toLocaleDateString('en-GB');
+  const d = ukDate(new Date(charge.created * 1000));
   const fee = (bt.fee / 100).toFixed(2);
   const row = new Array(20).fill('');
   row[0]=d; row[1]=d; row[2]='Stripe'; row[3]=`Stripe fee: ${charge.id}`;
-  row[4]='Card'; row[6]='Stripe'; row[10]=fee; row[19]=charge.id+'_fee';
+  row[4]='Card'; row[6]='Stripe'; row[7]='COGS'; row[8]='Expense'; row[9]='No'; row[10]=fee; row[13]='No VAT'; row[19]=charge.id+'_fee';
   return row;
 }
 exports.handler = async () => {
@@ -132,8 +133,21 @@ exports.handler = async () => {
       const feeRow = mapFeeRow(charge);
       if (feeRow && !existingExpenseIds.has(charge.id+'_fee')) expenseRows.push(feeRow);
     }
-    if (incomeRows.length > 0) { await sheetAppend(gToken, CFG.INCOME_TAB, incomeRows); await sortSheet(gToken, CFG.INCOME_GID); }
-    if (expenseRows.length > 0) { await sheetAppend(gToken, CFG.EXPENSES_TAB, expenseRows); await sortSheet(gToken, CFG.EXPENSES_GID); }
+    if (incomeRows.length > 0) {
+      await sheetAppend(gToken, CFG.INCOME_TAB, incomeRows);
+      await sortSheet(gToken, CFG.INCOME_GID);
+      // Formula columns must reference their own row after the sort
+      const colA = await sheetGet(gToken, `${CFG.INCOME_TAB}!A:A`);
+      await refreshIncomeFormulas(gToken, CFG.SHEET_ID, parseInt(CFG.INCOME_GID, 10), (colA.values || []).length)
+        .catch(e => console.error('refreshIncomeFormulas failed:', e.message));
+    }
+    if (expenseRows.length > 0) {
+      await sheetAppend(gToken, CFG.EXPENSES_TAB, expenseRows);
+      await sortSheet(gToken, CFG.EXPENSES_GID);
+      const colA = await sheetGet(gToken, `${CFG.EXPENSES_TAB}!A:A`);
+      await refreshExpenseFormulas(gToken, CFG.SHEET_ID, parseInt(CFG.EXPENSES_GID, 10), (colA.values || []).length)
+        .catch(e => console.error('refreshExpenseFormulas failed:', e.message));
+    }
     const syncTime = new Date().toISOString();
     await sheetPut(gToken, 'Config!B4', [[syncTime]]);
     console.log(`Done. Income: ${incomeRows.length}, Expenses: ${expenseRows.length}`);

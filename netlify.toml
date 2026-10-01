@@ -8,6 +8,17 @@
 
 [functions.starling-sync]
   schedule = "0 6,13,22 * * *"
+  timeout = 26
 
 [functions.stripe-sync]
   schedule = "0 6 * * *"
+  timeout = 26
+
+[functions.dashboard-data]
+  timeout = 26
+
+[functions.jobber-backfill]
+  timeout = 26
+
+[functions.jobber-invoice-webhook]
+  timeout = 26

@@ -9,6 +9,8 @@
 
 const crypto = require('crypto');
 const https  = require('https');
+const { refreshIncomeFormulas, ukDate } = require('./_shared/gl-formulas');
+const { getRefreshToken, saveRefreshToken } = require('./_shared/jobber-token-store');
 
 async function fetchServiceAccount() {
   function get(url) {
@@ -57,6 +59,7 @@ const COL = {
   DOM_COMM:     17,
   COMM_PCT:     18,
   DATE_PAID:    19,
+  TIP:          20,
 };
 
 exports.handler = async (event) => {
@@ -105,11 +108,15 @@ exports.handler = async (event) => {
       await reconcile(googleToken, sheetRow, rows[sheetRow - 1], mapped);
     } else {
       const newSheetRow  = rows.length + 1;
-      const newRowValues = buildRow(mapped, newSheetRow);
+      const newRowValues = buildRow(mapped);
       await appendRow(googleToken, newRowValues);
       console.log(`Invoice ${key}: appended at row ${newSheetRow}`);
       await sortSheet(googleToken);
       console.log('Sheet sorted');
+      // Rewrite formula columns so every row references itself after the sort
+      const after = await readSheet(googleToken);
+      await refreshIncomeFormulas(googleToken, CFG.SHEET_ID, parseInt(CFG.SHEET_GID, 10), after.length)
+        .catch(e => console.error('refreshIncomeFormulas failed:', e.message));
     }
 
     return { statusCode: 200, body: 'OK' };
@@ -124,12 +131,14 @@ function mapInvoice(inv) {
   const tip      = parseFloat((inv.amounts && inv.amounts.tipsTotal) || 0);
   // Use Jobber's total (inc VAT); fall back to subtotal*1.2 if not present
   const subtotal = parseFloat((inv.amounts && inv.amounts.subtotal)  || 0);
-  const total    = incTotal > 0 ? round2(incTotal) : round2(subtotal * 1.2 + tip);
+  // Sales (col I) EXCLUDES tips - tips are outside the scope of VAT and go in col U.
+  // If Jobber's total already includes the tip, strip it out.
+  let total = incTotal > 0 ? round2(incTotal) : round2(subtotal * 1.2);
+  if (tip > 0 && incTotal > 0 && Math.abs((incTotal - tip) - subtotal * 1.2) < 0.05) total = round2(incTotal - tip);
   const postedDate = inv.createdAt  ? toDate(inv.createdAt)  : '';
   const taxDate    = inv.issuedDate ? toDate(inv.issuedDate) : postedDate;
   let datePaid = 'Not Yet Paid';
   if (inv.receivedDate) datePaid = toDate(inv.receivedDate);
-  const frs = datePaid !== 'Not Yet Paid' ? round2(total * CFG.FRS_RATE) : '';
   const client = inv.client || {};
   const counterparty = (client.name || `${client.firstName||''} ${client.lastName||''}`.trim() || client.companyName || '').trim();
   const lineNodes   = (inv.lineItems && inv.lineItems.nodes) || [];
@@ -138,12 +147,13 @@ function mapInvoice(inv) {
   (inv.customFields || []).forEach(cf => {
     if ((cf.label || '').toLowerCase().includes('invoice type')) invoiceType = cf.valueDropdown || cf.valueText || '';
   });
-  return { postedDate, taxDate, counterparty, description, invoiceNo: String(inv.invoiceNumber), total, frs, tipNote: tip > 0 ? `Includes tip £${tip.toFixed(2)}` : '', domComm: invoiceType, datePaid };
+  return { postedDate, taxDate, counterparty, description, invoiceNo: String(inv.invoiceNumber), total, tip: tip > 0 ? round2(tip) : '', domComm: invoiceType, datePaid };
 }
 
-function buildRow(m, r) {
-  const prev = r - 1;
-  const row = new Array(20).fill('');
+function buildRow(m) {
+  // Formula columns (J,K,L,O,P,S) are left blank here and written by
+  // refreshIncomeFormulas() after the sort, so they always point at their own row.
+  const row = new Array(24).fill('');
   row[COL.POSTED_DATE]  = m.postedDate;
   row[COL.TAX_DATE]     = m.taxDate;
   row[COL.COUNTERPARTY] = m.counterparty;
@@ -152,20 +162,15 @@ function buildRow(m, r) {
   row[COL.INVOICE_NO]   = m.invoiceNo;
   row[COL.TYPE]         = 'SALES';
   row[COL.TOTAL]        = m.total;
-  row[COL.VAT]          = `=I${r}/6`;
-  row[COL.EX_VAT]       = `=I${r}-J${r}`;
-  row[COL.FRS]          = m.frs;
-  row[COL.NOTES_JOB]    = m.tipNote;
-  row[COL.TOTAL_YTD]    = `=O${prev}+I${r}`;
-  row[COL.EX_VAT_LIB]   = `=P${prev}+K${r}`;
+  if (m.tip) row[COL.NOTES] = 'Tip in col U (excluded from sales - outside VAT scope)';
   row[COL.DOM_COMM]     = m.domComm;
-  row[COL.COMM_PCT]     = `=IF(R${r}="Commercial",I${r}/O${r},0)`;
   row[COL.DATE_PAID]    = m.datePaid;
+  row[COL.TIP]          = m.tip;
   return row;
 }
 
 async function reconcile(googleToken, sheetRow, existing, m) {
-  const existingTotal   = parseFloat(existing[COL.TOTAL] || 0);
+  const existingTotal   = parseFloat(String(existing[COL.TOTAL] || 0).replace(/[£,]/g, ''));
   const existingName    = String(existing[COL.COUNTERPARTY] || '').trim().toLowerCase();
   const existingDatePaid = String(existing[COL.DATE_PAID] || '').trim();
   // existingTotal may be NaN if the cell contains a formula — treat that as a match
@@ -185,9 +190,14 @@ async function reconcile(googleToken, sheetRow, existing, m) {
   // Update Date Paid + FRS whenever Jobber has a payment date and sheet doesn't match
   const sheetIsPaid = existingDatePaid !== '' && existingDatePaid !== 'Not Yet Paid';
   if (m.datePaid !== 'Not Yet Paid' && !sheetIsPaid) {
-    await updateCell(googleToken, `${CFG.SHEET_TAB}!L${sheetRow}`, m.frs);
+    // FRS liability (col L) is a formula keyed off col T - only the date is written
     await updateCell(googleToken, `${CFG.SHEET_TAB}!T${sheetRow}`, m.datePaid);
-    console.log(`Invoice ${m.invoiceNo}: marked paid ${m.datePaid}, FRS=${m.frs}`);
+    console.log(`Invoice ${m.invoiceNo}: marked paid ${m.datePaid}`);
+    changed = true;
+  }
+
+  if (m.tip && !String(existing[COL.TIP] || '').trim()) {
+    await updateCell(googleToken, `${CFG.SHEET_TAB}!U${sheetRow}`, m.tip);
     changed = true;
   }
 
@@ -219,7 +229,7 @@ async function sortSheet(token) {
   if (!CFG.SHEET_GID) { console.log('GL_SHEET_GID not set — skipping sort'); return; }
   const rows = await readSheet(token);
   const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}:batchUpdate`;
-  const body = JSON.stringify({ requests: [{ sortRange: { range: { sheetId: parseInt(CFG.SHEET_GID), startRowIndex: 1, endRowIndex: rows.length, startColumnIndex: 0, endColumnIndex: 20 }, sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }] } }] });
+  const body = JSON.stringify({ requests: [{ sortRange: { range: { sheetId: parseInt(CFG.SHEET_GID), startRowIndex: 1, endRowIndex: rows.length, startColumnIndex: 0, endColumnIndex: 24 }, sortSpecs: [{ dimensionIndex: 0, sortOrder: 'ASCENDING' }] } }] });
   await sheetsRequest('POST', token, url, body);
 }
 
@@ -246,10 +256,9 @@ function sheetsRequest(method, token, url, body) {
 }
 
 async function getJobberToken(googleToken) {
-  // Read refresh token from Config!B1 in the sheet — survives redeploys, works with native Google Sheets
-  const refreshToken = await readSheetToken(googleToken);
-  if (!refreshToken) throw new Error('No refresh token in Config!B1 — please add it');
-  console.log('Got refresh token from Config sheet');
+  // Refresh token lives in Netlify Blobs (jobber-auth/refresh_token); legacy Config!B1 read once as fallback
+  const refreshToken = await getRefreshToken(() => readSheetToken(googleToken));
+  if (!refreshToken) throw new Error('No Jobber refresh token stored - re-authorise Jobber');
 
   const body = ['client_id='+encodeURIComponent(CFG.CLIENT_ID),'client_secret='+encodeURIComponent(CFG.CLIENT_SECRET),'grant_type=refresh_token','refresh_token='+encodeURIComponent(refreshToken)].join('&');
   const resp = await httpsPost('api.getjobber.com', '/api/oauth/token', body, { 'Content-Type': 'application/x-www-form-urlencoded' });
@@ -257,10 +266,9 @@ async function getJobberToken(googleToken) {
   if (!data.access_token) throw new Error('Token failed: ' + JSON.stringify(data));
   console.log('Jobber token OK');
 
-  // Write rotated refresh token back to Config!B1
-  if (data.refresh_token && data.refresh_token !== refreshToken) {
-    console.log('Rotating refresh token in Config sheet');
-    await writeSheetToken(googleToken, data.refresh_token).catch(e => console.error('Token rotation write failed:', e.message));
+  // Store rotated refresh token (always write, which also completes the one-time migration)
+  if (data.refresh_token) {
+    await saveRefreshToken(data.refresh_token).catch(e => console.error('Token rotation write failed:', e.message));
   }
 
   return data.access_token;
@@ -270,13 +278,8 @@ async function readSheetToken(googleToken) {
   const url  = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/Config!B1`;
   const resp = await sheetsGet(googleToken, url);
   const val  = resp.values && resp.values[0] && resp.values[0][0];
-  console.log('Config!B1 read:', val ? 'got token' : 'empty — ' + JSON.stringify(resp).substring(0,100));
+  // legacy only - used once to migrate the token into Netlify Blobs
   return val ? val.trim() : null;
-}
-
-async function writeSheetToken(googleToken, token) {
-  const url = `https://sheets.googleapis.com/v4/spreadsheets/${CFG.SHEET_ID}/values/${encodeURIComponent('Config!B1')}?valueInputOption=RAW`;
-  await sheetsRequest('PUT', googleToken, url, JSON.stringify({ range: 'Config!B1', values: [[token]] }));
 }
 
 async function fetchInvoice(token, invoiceId) {
@@ -324,7 +327,7 @@ function buildJWT(privateKey, claims) {
   return `${signing}.${sign.sign(privateKey, 'base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,'')}`;
 }
 function b64u(s) { return Buffer.from(s).toString('base64').replace(/\+/g,'-').replace(/\//g,'_').replace(/=/g,''); }
-function toDate(iso) { if (!iso) return ''; const d = new Date(iso); if (isNaN(d)) return ''; return `${pad(d.getDate())}/${pad(d.getMonth()+1)}/${d.getFullYear()}`; }
+function toDate(iso) { if (!iso) return ''; return ukDate(iso); } // UK local date (Netlify runs in UTC)
 function pad(n) { return String(n).padStart(2,'0'); }
 function round2(n) { return Math.round(n * 100) / 100; }
 function httpsPost(hostname, path, body, headers) {

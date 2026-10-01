@@ -24,6 +24,7 @@ async function fetchServiceAccount() {
 }
 
 const https = require('https');
+const { refreshExpenseFormulas, ukDate } = require('./_shared/gl-formulas');
 
 const CFG = {
   STARLING_TOKEN: process.env.STARLING_ACCESS_TOKEN,
@@ -218,9 +219,8 @@ function mapTx(tx, source, rules) {
   if (tx.source === 'INTERNAL_TRANSFER') return null;
   if (tx.status === 'DECLINED') return null;
 
-  const date = tx.transactionTime
-    ? new Date(tx.transactionTime).toLocaleDateString('en-GB')
-    : '';
+  // UK date, not UTC — otherwise 00:00–01:00 BST payments land on the previous day
+  const date = tx.transactionTime ? ukDate(tx.transactionTime) : '';
   const amount = tx.amount ? (tx.amount.minorUnits / 100).toFixed(2) : '0.00';
   const supplier = tx.counterPartyName || '';
   const description = tx.reference || tx.userNote || '';
@@ -562,6 +562,17 @@ exports.handler = async (event) => {
       }
 
       await sortExpenses(gToken);
+
+      // Re-write the formula columns (VAT, Ex VAT, running totals) for every
+      // data row so they always reference their own row after the sort.
+      try {
+        const colA = await sheetsGet(gToken, CFG.EXPENSES_TAB + '!A:A');
+        const lastRow = (colA.values || []).length;
+        await refreshExpenseFormulas(gToken, CFG.SHEET_ID, CFG.EXPENSES_GID, lastRow);
+        console.log('Expense formulas refreshed to row ' + lastRow);
+      } catch (e) {
+        console.error('refreshExpenseFormulas failed:', e.message); // non-fatal
+      }
     }
 
     // 5a. Push employee Wage/Mileage payments into Salary Workings workbooks
