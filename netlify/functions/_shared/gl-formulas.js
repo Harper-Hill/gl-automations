@@ -56,7 +56,7 @@ async function refreshIncomeFormulas(token, spreadsheetId, gid, lastRow) {
     repeat(gid, 2, lastRow, 11, '=IF(OR(T2="",T2="Not Yet Paid"),"",ROUND(I2*0.12,2))'),
     repeat(gid, 2, lastRow, 14, '=SUMIF(H$2:H2,"SALES",I$2:I2)'),
     repeat(gid, 2, lastRow, 15, '=SUMIF(H$2:H2,"SALES",I$2:I2)-SUMIF(H$2:H2,"SALES",L$2:L2)'),
-    repeat(gid, 2, lastRow, 18, '=IF(R2="Commercial",IFERROR(I2/O2,0),0)'),
+    repeat(gid, 2, lastRow, 18, '=IFERROR(SUMIFS($I$2:I2,$H$2:H2,"SALES",$R$2:R2,"Commercial")/O2,0)'),
   ]);
 }
 
