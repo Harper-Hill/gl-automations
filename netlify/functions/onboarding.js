@@ -615,6 +615,51 @@ async function handlePost(token, body, user, qs) {
     return { ok: true, evidence: evidence[itemId] };
   }
 
+  // Links a Drive folder to a starter who doesn't have one — e.g. anyone
+  // added before Drive integration existed, or whose folder was made by
+  // hand under a different name. Pass body.folder (a folder link or ID) to
+  // use an existing folder; leave it blank to find-or-create
+  // Employees/<starter name> under GL_STAFF_DRIVE_ID, same as 'add' does.
+  if (op === 'linkFolder') {
+    if (!isDirector(user)) return { error: 'Director role required to link a Drive folder', status: 403 };
+    const raw = String(body.folder || '').trim();
+    let folder = null;
+    if (raw) {
+      const m = raw.match(/\/folders\/([\w-]+)/) || raw.match(/[?&]id=([\w-]+)/) || raw.match(/^([\w-]{10,})$/);
+      if (!m) return { error: "That doesn't look like a Drive folder link or ID", status: 400 };
+      let meta;
+      try {
+        meta = await driveJson(
+          token,
+          '/drive/v3/files/' + m[1] + '?supportsAllDrives=true&fields=' + encodeURIComponent('id,name,mimeType,trashed'),
+          'GET'
+        );
+      } catch (e) {
+        return { error: "Couldn't open that folder — check the link, and that it's shared with the gl-automations service account", status: 400 };
+      }
+      if (meta.mimeType !== 'application/vnd.google-apps.folder') return { error: 'That link is a file, not a folder', status: 400 };
+      if (meta.trashed) return { error: 'That folder is in the bin', status: 400 };
+      folder = { id: meta.id, url: 'https://drive.google.com/drive/folders/' + meta.id, name: meta.name };
+      const managerEmail = lookupManagerEmail(cur[5]);
+      const sharedWith = new Set();
+      for (const e of [managerEmail].concat(MANAGEMENT_EMAILS)) {
+        if (!e || sharedWith.has(e.toLowerCase())) continue;
+        sharedWith.add(e.toLowerCase());
+        await shareWithEmailSafe(token, folder.id, e, 'writer');
+      }
+    } else {
+      if (!STAFF_DRIVE_ROOT_ID) return { error: 'GL_STAFF_DRIVE_ID is not set — paste a folder link instead', status: 409 };
+      folder = await createStarterFolder(token, String(cur[2] || '').trim() || 'Unnamed starter', cur[5]);
+      if (!folder) return { error: "Couldn't create the Drive folder", status: 500 };
+    }
+    while (cur.length < 19) cur.push('');
+    cur[10] = folder.id;
+    cur[11] = folder.url;
+    await writeRow(token, rowIndex, cur);
+    if (cur[9]) await shareWithEmailSafe(token, folder.id, cur[9], 'writer');
+    return { ok: true, driveFolderId: folder.id, driveFolderUrl: folder.url, folderName: folder.name || '' };
+  }
+
   if (op === 'email') {
     const email = String(body.email || '').trim();
     cur[9] = email;

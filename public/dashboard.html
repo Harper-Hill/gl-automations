@@ -1026,6 +1026,13 @@ function renderOnboarding(data){
           ${signedIn?`<button onclick="submitObEmail('${s.id}',${s.rowIndex})">Save</button>`:''}
           ${s.driveFolderUrl?`<a href="${s.driveFolderUrl}" target="_blank" rel="noopener" style="font-size:9px;color:var(--green-lt)">Open Drive folder</a>`:'<span style="font-size:9px;color:var(--faint)">Drive folder not set up yet</span>'}
         </div>`;
+        if(!s.driveFolderUrl&&dir){
+          html+=`<div class="ob-email-row">
+          <label>Drive folder</label>
+          <input type="text" id="ob-folder-${s.id}" placeholder="paste folder link, or leave blank to find/create Staff › Employees › ${escHtml(s.name||'')}">
+          <button onclick="submitObLinkFolder('${s.id}',${s.rowIndex})">Link folder</button>
+        </div>`;
+        }
         OB_PHASES.forEach(phase=>{
           if(phase.partLabel)html+=`<div class="ob-part">${escHtml(phase.partLabel)}</div>`;
           const pChecked=phase.items.filter(it=>checks[it.id]).length;
@@ -1254,6 +1261,22 @@ function obUpdateHmrcPreview(){
   else if(q10&&q10.value==='Yes')statement='B';
   const out=document.getElementById('ob-hmrc-statement-preview');
   if(out)out.textContent='Tax code statement: '+statement;
+}
+
+async function submitObLinkFolder(id,rowIndex){
+  const input=document.getElementById('ob-folder-'+id);
+  const folder=input?input.value.trim():'';
+  try{
+    const res=await fetch('/.netlify/functions/onboarding?op=linkFolder',{
+      method:'POST',
+      headers:Object.assign({'Content-Type':'application/json'},await authHeaders()),
+      body:JSON.stringify({id,rowIndex,folder})
+    });
+    const data=await res.json();
+    if(data.error)throw new Error(data.error);
+    if(_obCache){const s=(_obCache.items||[]).find(x=>x.id===id);if(s){s.driveFolderId=data.driveFolderId;s.driveFolderUrl=data.driveFolderUrl;}}
+    renderOnboarding(_obCache);
+  }catch(e){alert('Error: '+e.message);}
 }
 
 async function submitObEmail(id,rowIndex){
