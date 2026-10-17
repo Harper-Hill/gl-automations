@@ -106,6 +106,34 @@ body{display:flex;flex-direction:column}
 .spinner{width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 @media(max-width:380px){.sync-grid{grid-template-columns:1fr}.month-grid{grid-template-columns:1fr}}
+/* Balance sheet tab */
+.bs-snap{font-size:10px;color:var(--dim);margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.bs-snap-src{color:var(--faint);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.bs-grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+.bs-mini{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 10px;text-align:center}
+.bs-mini-label{font-size:8px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;justify-content:center;gap:3px}
+.bs-mini-val{font-family:'Syne',sans-serif;font-size:17px;font-weight:700;line-height:1}
+.bs-mini-sub{font-size:9px;color:var(--dim);margin-top:5px}
+.bs-row{display:flex;justify-content:space-between;align-items:baseline;padding:8px 0;border-bottom:1px solid #1a1e1c;font-size:11px}
+.bs-row:last-child{border:none}
+.bs-row.total{padding-top:10px;margin-top:4px;border-top:1px solid var(--border);font-weight:500}
+.bs-row-label{color:var(--muted);display:flex;align-items:center;gap:4px}
+.bs-row-val{color:var(--text);font-family:'Syne',sans-serif;font-weight:500;white-space:nowrap}
+.bs-row-val.neg{color:var(--red)}.bs-row-val.pos{color:var(--green-lt)}
+.bs-warn{background:var(--red-dk);border:1px solid #3a1e1c;border-radius:6px;padding:10px 12px;margin-bottom:12px;font-size:11px;color:var(--red);line-height:1.4;display:flex;gap:8px;align-items:flex-start}
+.bs-warn-icon{flex-shrink:0;width:14px;height:14px;margin-top:1px}
+.bs-ageing-wrap{margin:12px 0 8px}
+.bs-ageing-bar{display:flex;height:18px;border-radius:4px;overflow:hidden;background:#1e2420;border:1px solid var(--border)}
+.bs-ageing-seg{height:100%;border-right:1px solid var(--bg)}
+.bs-ageing-seg:last-child{border-right:none}
+.bs-ageing-labels{display:flex;flex-wrap:wrap;gap:8px 14px;margin-top:10px}
+.bs-ageing-key{display:flex;align-items:center;gap:5px;font-size:9px;color:var(--dim)}
+.bs-ageing-sw{width:9px;height:9px;border-radius:2px;flex-shrink:0}
+.bs-ratios{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.bs-ratio{text-align:center;padding:10px 6px;background:#111614;border-radius:6px;border:1px solid var(--border)}
+.bs-ratio-val{font-family:'Syne',sans-serif;font-size:18px;font-weight:700;color:var(--text);line-height:1}
+.bs-ratio-label{font-size:8px;color:var(--faint);letter-spacing:.08em;text-transform:uppercase;margin-top:6px;line-height:1.3}
+@media(max-width:380px){.bs-grid3{grid-template-columns:1fr 1fr}.bs-grid3 .bs-mini:nth-child(3){grid-column:1/-1}.bs-ratios{grid-template-columns:1fr}}
     /* Notifications page */
     .auth-btn{background:none;border:1px solid var(--border);border-radius:4px;color:var(--green-lt);font-family:'DM Mono',monospace;font-size:9px;padding:2px 7px;cursor:pointer;letter-spacing:.06em;text-transform:uppercase}
     .auth-btn.signed-out{color:var(--faint)}
@@ -249,6 +277,7 @@ body{display:flex;flex-direction:column}
 <div class="scroll" id="scroll">
   <div class="section active" id="sec-overview"><div id="overview-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-expenses"><div id="expenses-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
+  <div class="section" id="sec-balance"><div id="balance-content"><div class="loading"><div class="spinner"></div>Loading...</div></div></div>
   <div class="section" id="sec-prices">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
       <div class="slabel" style="margin:0">Service Rates (inc. VAT)</div>
@@ -272,6 +301,10 @@ body{display:flex;flex-direction:column}
   <button class="bnav-btn" id="btn-expenses" onclick="switchTab('expenses')">
     <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="8"/><path d="M10 6v4l3 3"/></svg>
     Expenses
+  </button>
+  <button class="bnav-btn" id="btn-balance" onclick="switchTab('balance')">
+    <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M10 3v14M5 17h10"/><path d="M4 7h12"/><path d="M4 7l-2 4a3 3 0 0 0 6 0L6 7M14 7l-2 4a3 3 0 0 0 6 0L16 7"/></svg>
+    Balance
   </button>
   <button class="bnav-btn" id="btn-prices" onclick="switchTab('prices')">
     <svg class="bnav-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 10h14M3 5h14M3 15h9"/></svg>
@@ -671,14 +704,146 @@ function setPriceYear(yr){
 }
 setPriceYear(2026);
 
+// ── BALANCE SHEET ─────────────────────────────────────────────
+let _bsChart=null, _bsData=null;
+function renderBalance(b){
+  if(!b){document.getElementById('balance-content').innerHTML='<div class="loading" style="color:var(--faint)">No balance sheet data yet</div>';return;}
+  _bsData=b;
+  const neg=v=>v<0;
+  const sign=v=>(v<0?'−':'')+'£'+Math.abs(v).toLocaleString('en-GB',{minimumFractionDigits:0,maximumFractionDigits:0});
+  const bd=b.breakdown||{};
+  const ca=bd.currentAssets||{},nca=bd.nonCurrentAssets||{},cl=bd.currentLiabilities||{};
+  const bv=b.businessValue||{current:0,ytdPct:0,monthly:[]};
+  const cash=b.cashAtBank||{current:0,monthly:[]};
+  const debt=b.totalDebt||{current:0,ytdPct:0,monthly:[]};
+  const nbv=b.nonCurrentAssetsNBV||{current:0};
+  const lma=b.liabilitiesMinusCurrentAssets||{current:0};
+
+  // The "Liabilities Minus Current Assets" row: positive = liabilities > current assets (negative working capital)
+  const wcPositive=lma.current<0; // negative LMA = positive working capital
+  const wcMsg=wcPositive
+    ? `Current assets cover current liabilities with ${fmt(Math.abs(lma.current))} of headroom.`
+    : `Current liabilities exceed current assets by ${fmt(lma.current)} — short-term squeeze. Chasing receivables would ease it.`;
+
+  document.getElementById('balance-content').innerHTML=`
+    <div class="bs-snap">
+      <div>Snapshot: <strong style="color:var(--muted)">${b.snapshotMonth||'—'}</strong></div>
+      <div class="bs-snap-src">${b.source||''}</div>
+    </div>
+
+    <div class="metric" style="border-color:#2a4a6b;background:#0d1a24;margin-bottom:12px">
+      <div class="mlabel" style="color:#6a9abf">Business value ${ib('Total assets minus total liabilities — the book value, what the company is worth on paper before intangibles')}</div>
+      <div class="mval" style="color:#4a8abf">${fmt(bv.current)}</div>
+      <div class="badge ${bv.ytdPct>=0?'up':'dn'}" style="${bv.ytdPct>=0?'background:#0d2a3d;color:#4a8abf':''}">${bv.ytdPct>=0?'+':''}${bv.ytdPct}% YTD</div>
+      <div class="mprev">${bv.label||'Total assets − total liabilities'}</div>
+    </div>
+
+    <div class="bs-grid3">
+      <div class="bs-mini">
+        <div class="bs-mini-label">Cash at bank ${ib('End-of-month cash balance across all accounts')}</div>
+        <div class="bs-mini-val" style="color:${cash.current<1000?'#c08a3e':'var(--green-lt)'}">${fmt(cash.current)}</div>
+        <div class="bs-mini-sub">Avg ${fmt(cash.avg)}</div>
+      </div>
+      <div class="bs-mini">
+        <div class="bs-mini-label">Total debt ${ib('Everything the business owes — 3rd parties plus director loan')}</div>
+        <div class="bs-mini-val" style="color:var(--red)">${fmt(debt.current)}</div>
+        <div class="bs-mini-sub" style="color:${debt.ytdPct<=0?'var(--green-lt)':'var(--red)'}">${debt.ytdPct>=0?'+':''}${debt.ytdPct}% YTD</div>
+      </div>
+      <div class="bs-mini">
+        <div class="bs-mini-label">Fixed assets ${ib('Non-current asset net book value — equipment, vehicles, after depreciation')}</div>
+        <div class="bs-mini-val">${fmt(nbv.current)}</div>
+        <div class="bs-mini-sub">NBV</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="slabel">Monthly trajectory — 2026</div>
+      <div class="legend">
+        <div class="legend-item"><div class="ldot" style="background:#4a8abf"></div>Business value</div>
+        <div class="legend-item"><div class="ldot" style="background:#c05c4a"></div>Total debt</div>
+        <div class="legend-item"><div class="ldot" style="background:#5a9e68"></div>Cash</div>
+      </div>
+      <div class="chart-wrap" style="height:200px"><canvas id="bsChart"></canvas></div>
+    </div>
+
+    <div class="bs-warn" style="background:${wcPositive?'#0d2a1a':'var(--red-dk)'};border-color:${wcPositive?'#1e3a28':'#3a1e1c'};color:${wcPositive?'var(--green-lt)':'var(--red)'}">
+      <svg class="bs-warn-icon" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5">${wcPositive?'<circle cx="10" cy="10" r="8"/><path d="M6 10l3 3 5-6"/>':'<path d="M10 2L2 17h16L10 2z"/><path d="M10 8v4M10 15h.01"/>'}</svg>
+      <div><strong>${wcPositive?'Positive working capital.':'Working capital tight.'}</strong> ${wcMsg}</div>
+    </div>
+
+    <div class="card">
+      <div class="slabel">October breakdown</div>
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin:4px 0 4px">Current assets</div>
+      <div class="bs-row"><div class="bs-row-label">Cash at bank</div><div class="bs-row-val pos">${fmt(ca.cashAtBank)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">Receivables</div><div class="bs-row-val">${fmt(ca.receivables)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">Less 12% FRS VAT ${ib('Flat Rate Scheme VAT portion already owed to HMRC on outstanding invoices')}</div><div class="bs-row-val" style="color:var(--red)">${sign(ca.lessFrsVat)}</div></div>
+      <div class="bs-row total"><div class="bs-row-label">Current assets subtotal</div><div class="bs-row-val">${fmt(ca.total)}</div></div>
+
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 4px">Non-current assets</div>
+      <div class="bs-row"><div class="bs-row-label">Fixed assets NBV ${ib('Net book value — equipment, vehicles after depreciation')}</div><div class="bs-row-val">${fmt(nca.nbv)}</div></div>
+
+      <div style="font-size:9px;color:var(--faint);letter-spacing:.1em;text-transform:uppercase;margin:14px 0 4px">Current liabilities</div>
+      <div class="bs-row"><div class="bs-row-label">Debt — 3rd parties</div><div class="bs-row-val">${fmt(cl.thirdPartyDebt)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">Director's loan ${ib('Positive = company owes director; negative = director owes company')}</div><div class="bs-row-val" style="color:${cl.directorOwed<0?'var(--green-lt)':'var(--muted)'}">${sign(cl.directorOwed)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">VAT liability</div><div class="bs-row-val">${fmt(cl.vatLiability)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">Corporation tax liability</div><div class="bs-row-val">${fmt(cl.corporationTaxLiability)}</div></div>
+      <div class="bs-row"><div class="bs-row-label">Flexi hours owed</div><div class="bs-row-val">${fmt(cl.flexiHrsOwed)}</div></div>
+      <div class="bs-row total"><div class="bs-row-label">Current liabilities subtotal</div><div class="bs-row-val" style="color:var(--red)">${fmt(cl.total)}</div></div>
+
+      <div style="height:8px"></div>
+      <div class="bs-row total" style="padding-top:12px"><div class="bs-row-label">Business value ${ib('Total assets minus total liabilities')}</div><div class="bs-row-val" style="color:#4a8abf;font-size:14px">${fmt(bv.current)}</div></div>
+    </div>
+
+    ${isDirector(_user)?`
+    <div class="card" style="background:#0d1a24;border-color:#2a4a6b">
+      <div class="slabel" style="color:#6a9abf">For the sale</div>
+      <div style="font-size:11px;color:var(--muted);line-height:1.5">
+        Book value has grown from <strong>${fmt(bv.monthly[0])}</strong> in January to <strong>${fmt(bv.current)}</strong> now — a <strong style="color:#4a8abf">${bv.ytdPct>=0?'+':''}${bv.ytdPct}% increase</strong> this year. Debt is down <strong>${Math.abs(debt.ytdPct)}%</strong>. The book value doesn't yet reflect intangibles (the systems, the client book, the trained team).
+      </div>
+    </div>`:''}
+  `;
+
+  // Draw trajectory chart
+  setTimeout(()=>{
+    const el=document.getElementById('bsChart');
+    if(!el||!window.Chart)return;
+    if(_bsChart){try{_bsChart.destroy();}catch(e){}}
+    const ctx=el.getContext('2d');
+    const months=b.monthLabels||['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    _bsChart=new Chart(ctx,{
+      type:'line',
+      data:{
+        labels:months,
+        datasets:[
+          {label:'Business value',data:bv.monthly,borderColor:'#4a8abf',backgroundColor:'rgba(74,138,191,.08)',tension:.3,borderWidth:2,pointRadius:3,pointBackgroundColor:'#4a8abf',fill:true},
+          {label:'Total debt',data:debt.monthly,borderColor:'#c05c4a',backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:2,pointBackgroundColor:'#c05c4a',borderDash:[4,3]},
+          {label:'Cash',data:cash.monthly,borderColor:'#5a9e68',backgroundColor:'transparent',tension:.3,borderWidth:1.5,pointRadius:2,pointBackgroundColor:'#5a9e68'}
+        ]
+      },
+      options:{
+        responsive:true,maintainAspectRatio:false,
+        plugins:{legend:{display:false},tooltip:{backgroundColor:'#1a2a1e',borderColor:'#2a4030',borderWidth:1,padding:10,titleFont:{family:'Syne',size:12,weight:'700'},bodyFont:{family:'DM Mono',size:11},callbacks:{label:c=>' '+c.dataset.label+': £'+(c.parsed.y||0).toLocaleString('en-GB',{maximumFractionDigits:0})}}},
+        scales:{
+          x:{grid:{color:'#1e2420',drawBorder:false},ticks:{color:'#6b7a6e',font:{family:'DM Mono',size:9}}},
+          y:{grid:{color:'#1e2420',drawBorder:false},ticks:{color:'#6b7a6e',font:{family:'DM Mono',size:9},callback:v=>'£'+(v/1000).toFixed(0)+'k'}}
+        },
+        interaction:{mode:'index',intersect:false}
+      }
+    });
+  },50);
+}
+
 async function loadData(silent){
   if(!silent)document.getElementById('live-dot').style.background='#4a5e50';
   try{
-    const res=await fetch('/.netlify/functions/dashboard-data');
-    const d=await res.json();
-    if(d.error)throw new Error(d.error);
-    renderOverview(d);renderExpenses(d);renderGoals(d);renderHours(d);
-    document.getElementById('hdr-time').textContent=new Date(d.updatedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const [dRes, bRes]=await Promise.all([
+      fetch('/.netlify/functions/dashboard-data').then(r=>r.json()).catch(e=>({error:e.message})),
+      fetch('/.netlify/functions/balance-sheet').then(r=>r.json()).catch(e=>({error:e.message}))
+    ]);
+    if(dRes.error)throw new Error(dRes.error);
+    renderOverview(dRes);renderExpenses(dRes);renderGoals(dRes);renderHours(dRes);
+    if(bRes&&!bRes.error){renderBalance(bRes);}else{renderBalance(null);}
+    document.getElementById('hdr-time').textContent=new Date(dRes.updatedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
     document.getElementById('live-dot').style.background='#5a9e68';
   }catch(e){
     document.getElementById('overview-content').innerHTML='<div class="loading" style="color:var(--red)">Error: '+e.message+'</div>';
@@ -748,8 +913,8 @@ function handleAuth(){
 }
 if(window.netlifyIdentity){
   netlifyIdentity.on('init', user=>{_user=user;updateAuthUI();});
-  netlifyIdentity.on('login', user=>{_user=user;updateAuthUI();netlifyIdentity.close();if(document.getElementById('btn-notifs').classList.contains('active'))loadNotifs();});
-  netlifyIdentity.on('logout', ()=>{_user=null;updateAuthUI();if(document.getElementById('btn-notifs').classList.contains('active'))renderNotifs(_notifsCache);});
+  netlifyIdentity.on('login', user=>{_user=user;updateAuthUI();netlifyIdentity.close();if(document.getElementById('btn-notifs').classList.contains('active'))loadNotifs();if(_bsData)renderBalance(_bsData);});
+  netlifyIdentity.on('logout', ()=>{_user=null;updateAuthUI();if(document.getElementById('btn-notifs').classList.contains('active'))renderNotifs(_notifsCache);if(_bsData)renderBalance(_bsData);});
 }
 
 // ── NOTIFICATIONS ──────────────────────────────────────────────
